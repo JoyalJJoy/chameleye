@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as readline from "node:readline";
 import { analyzeProject } from "./analyzer.js";
 import { subgraphFrom, FlowGraph } from "./graph.js";
 import { renderTerminal, renderMermaid, renderJson } from "./renderer.js";
@@ -121,6 +122,65 @@ ${c.dim("Docs: https://github.com/JoyalJJoy/chameleye  •  ")}
 `.trim();
 }
 
+function welcome() {
+  const g = c.green, b = c.bold, d = c.dim, cy = c.cyan, y = c.yellow;
+  // green box top
+  const line = g("─".repeat(62));
+  console.log("");
+  console.log(g("┌" + line + "┐"));
+  console.log(g("│") + b(g("  👁️  ChamelEye  — 360° vision for your codebase  ")) + g("         │"));
+  console.log(g("│") + d("  Like a chameleon eye, see every flow independently  ") + g("    │"));
+  console.log(g("├" + line + "┤"));
+  console.log(g("│") + `  ${cy("◆ architecture")}  ${d("panoramic system map")}          ${cy("◆ trace")}  ${d("focus one eye")}      ` + g("│"));
+  console.log(g("│") + `  ${cy("◆ check")}       ${d("guard layers")}                 ${cy("◆ circular")} ${d("find cycles")}      ` + g("│"));
+  console.log(g("│") + `  ${cy("◆ impact")}      ${d("blast radius")}                 ${cy("◆ doctor")}  ${d("validate setup")}   ` + g("│"));
+  console.log(g("└" + line + "┘"));
+  console.log("");
+  console.log(b("  Quick navigate:") + d("  (type number or command, q to quit)"));
+  console.log(`  ${g("[1]")} ${cy("architecture")}  ${d("— vision")}      ${g("[2]")} ${cy("trace")}  ${d("POST /api/users")}   ${g("[3]")} ${cy("check")}  ${d("layers")}`);
+  console.log(`  ${g("[4]")} ${cy("circular")}    ${d("— cycles")}      ${g("[5]")} ${cy("doctor")} ${d("— setup")}        ${g("[6]")} ${cy("help")}   ${d("— all cmds")}`);
+  console.log("");
+  console.log(d("  Try: ") + cy("chameleye trace POST /api/users --format mermaid --output flow.mmd"));
+  console.log(d("  Docs: https://github.com/JoyalJJoy/chameleye"));
+  console.log("");
+}
+
+async function interactiveWelcome() {
+  welcome();
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    console.log(help());
+    return;
+  }
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q: string) => new Promise<string>(res => rl.question(q, res));
+  while (true) {
+    const ans = (await ask(c.cyan("› ") + "Select " + c.green("[1-6]") + c.dim(" or type command ") + c.dim("(q to quit): "))).trim().toLowerCase();
+    if (!ans || ans === "q" || ans === "quit" || ans === "exit") { rl.close(); break; }
+    // number map
+    const map: Record<string, string> = { "1": "architecture", "2": "trace", "3": "check", "4": "circular", "5": "doctor", "6": "help", "7": "dependencies", "8": "impact" };
+    let cmd = map[ans] ?? ans;
+    // handle trace without target -> prompt for it
+    if (cmd === "trace" || cmd === "eye") {
+      const t = (await ask(c.dim("  route/function (e.g. POST /api/users): "))).trim();
+      if (t) cmd = `trace ${t}`;
+      else { console.log(c.yellow("  → try: trace POST /api/users")); continue; }
+    }
+    if (cmd === "help" || cmd === "--help" || cmd === "-h") { console.log(help()); continue; }
+    // re-invoke main with new args by spawning
+    const parts = cmd.split(/\s+/);
+    // fake argv
+    const fakeArgs = parts;
+    // temporarily override args and call main logic via spawn
+    // simplest: spawn node process
+    const { spawnSync } = await import("node:child_process");
+    const exe = process.argv[0];
+    const script = process.argv[1];
+    const res = spawnSync(exe, [script, ...fakeArgs], { stdio: "inherit" });
+    // after child exits, loop again unless it was quit
+    console.log("");
+  }
+}
+
 function parseOpts(list: string[]) {
   const o: Record<string, string> = {};
   for (let i = 0; i < list.length; i++) {
@@ -201,7 +261,11 @@ function runCheck(g: FlowGraph) {
 }
 
 async function main() {
-  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+  if (args.length === 0) {
+    await interactiveWelcome();
+    return;
+  }
+  if (args.includes("--help") || args.includes("-h")) {
     const cmd = args.find(a => ALL_CMDS.includes(a.replace(/^--/, "")));
     console.log(help(cmd));
     return;
