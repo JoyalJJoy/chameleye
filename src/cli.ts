@@ -31,6 +31,37 @@ function react(ok: "success" | "warn" | "error" | "info", title: string, hint?: 
   else console.log(msg);
 }
 
+// human-readable errors — never raw stacks unless --verbose
+function humanError(err: unknown, ctx?: string): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const first = raw.split("\n")[0].trim();
+  // file not found
+  if (/ENOENT/i.test(raw)) {
+    const m = raw.match(/['"]([^'"]+)['"]/) || raw.match(/ENOENT[^:]*:\s*([^\n,]+)/i);
+    const file = m?.[1]?.trim() || "a file";
+    return `${c.red("✗")} We couldn't find ${c.bold(file)}${ctx ? c.dim(` while ${ctx}`) : ""}\n  ${c.dim("Does it exist? Check the path or run from project root.")}\n  ${c.dim("Try: chameleye doctor --verbose")}`;
+  }
+  if (/EACCES|permission denied|EPERM/i.test(raw)) {
+    return `${c.red("✗")} Permission denied${ctx ? c.dim(` while ${ctx}`) : ""}\n  ${c.dim(first)}\n  ${c.dim("Try: check file permissions or avoid running with sudo")}`;
+  }
+  if (/Cannot find name|TS2304|TS2307|TS1005|SyntaxError/i.test(raw)) {
+    return `${c.red("✗")} We had trouble reading your code${ctx ? ` in ${ctx}` : ""}\n  ${c.dim(first)}\n  ${c.dim("Check for a syntax or import error — try: npx tsc --noEmit")}`;
+  }
+  if (/JSON.*parse|Unexpected token/i.test(raw)) {
+    return `${c.red("✗")} We couldn't parse JSON${ctx ? ` for ${ctx}` : ""}\n  ${c.dim(first)}\n  ${c.dim("Check that the file is valid JSON")}`;
+  }
+  // generic — friendly, actionable, no raw stack unless verbose
+  let out = `${c.red("✗")} Something went wrong${ctx ? ` while ${ctx}` : ""}\n  ${c.dim(first)}`;
+  if (isVerbose && err instanceof Error && err.stack) {
+    const st = err.stack.split("\n").slice(1, 4).join("\n");
+    out += `\n${c.dim(st)}`;
+  } else {
+    out += `\n  ${c.dim("Run with --verbose to see more detail")}`;
+  }
+  out += `\n  ${c.dim("Try: chameleye doctor --verbose")}\n  ${c.dim("Report: https://github.com/JoyalJJoy/chameleye/issues")}`;
+  return out;
+}
+
 // progress visuals — spinner + bar + steps (stderr, not polluting stdout for --format json)
 function createProgress() {
   const enabled = process.stderr.isTTY && !args.includes("--no-progress") && !process.argv.includes("--no-progress");
@@ -348,9 +379,15 @@ function parseOpts(list: string[]) {
 function writeOutput(content: string, opts: Record<string,string>) {
   if (opts.output) {
     const p = path.resolve(cwd, opts.output);
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, content);
+    try {
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, content);
+    } catch (e) {
+      console.error(humanError(e, `writing ${p}`));
+      process.exit(1);
+    }
     console.log(c.green(`✓ wrote ${p} (${content.length} bytes)`));
+    react("success", `Output written`, `${p} — ${content.length} bytes`, opts);
   } else {
     console.log(content);
   }
@@ -454,7 +491,12 @@ async function main() {
       return;
     }
     const tpl = `export default {\n  project: { root: "." },\n  analysis: { include: ["src/**"], exclude: ["node_modules/**", "dist/**"] },\n  integrations: { postgres: true, redis: true, kafka: true }\n};\n`;
-    fs.writeFileSync(cfgPath, tpl);
+    try {
+      fs.writeFileSync(cfgPath, tpl);
+    } catch (e) {
+      console.error(humanError(e, `creating ${cfgPath}`));
+      process.exit(1);
+    }
     react("success", `Created ${cfgPath}`, "Next: chameleye architecture → chameleye trace POST /api/users", opts);
     return;
   }
@@ -463,7 +505,14 @@ async function main() {
     const prog0 = createProgress();
     const useProg0 = !opts["no-progress"] && !args.includes("--no-progress") && process.stderr.isTTY;
     if (useProg0) prog0.start("Scanning files...");
-    const g0 = analyzeProject(cwd, (p,d,t)=> { if (useProg0) prog0.update(p,d,t); else if (isVerbose) vlog(`${p} ${d}/${t}`); });
+    let g0: FlowGraph;
+    try {
+      g0 = analyzeProject(cwd, (p,d,t)=> { if (useProg0) prog0.update(p,d,t); else if (isVerbose) vlog(`${p} ${d}/${t}`); });
+    } catch (e) {
+      if (useProg0) prog0.fail("Scan failed");
+      console.error(humanError(e, "scanning your project"));
+      process.exit(1);
+    }
     if (useProg0) prog0.succeed(`Scanned ${g0.meta?.filesScanned} files → ${g0.nodes.length} nodes, ${g0.edges.length} edges ${c.dim(`(${Date.now()-t0}ms)`)}`);
     const hasRoutes = g0.nodes.filter(n=>n.type==="ROUTE").length;
     const hasDb = g0.nodes.some(n=>n.type==="DATABASE");
@@ -494,12 +543,19 @@ async function main() {
   const showProg = !opts["no-progress"] && !args.includes("--no-progress") && process.stderr.isTTY;
   const useProg = showProg;
   if (useProg) prog.start("Scanning files...");
-  const g = analyzeProject(cwd, (phase, done, total) => {
-    if (useProg) prog.update(phase, done, total);
-    else if (isVerbose) vlog(`${phase} ${done}/${total}`);
-  });
+  let g: FlowGraph;
+  try {
+    g = analyzeProject(cwd, (phase, done, total) => {
+      if (useProg) prog.update(phase, done, total);
+      else if (isVerbose) vlog(`${phase} ${done}/${total}`);
+    });
+  } catch (e) {
+    if (useProg) prog.fail("Analysis failed");
+    console.error(humanError(e, "analyzing your project"));
+    process.exit(1);
+  }
   if (useProg) prog.succeed(`Analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes, ${g.edges.length} edges ${c.dim(`(${Date.now()-t0}ms)`)}`);
-  else vlog(`analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes ${g.edges.length} edges ${Date.now()-t0}ms`);
+  else if (isVerbose) vlog(`analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes ${g.edges.length} edges ${Date.now()-t0}ms`);
   if (g.nodes.length===0) {
     react("error", "No nodes found — not a TypeScript/JS project?", "Try: chameleye doctor  →  chameleye init", opts);
     process.exit(1);
@@ -849,4 +905,8 @@ async function main() {
   }
 }
 
-main().catch(e => { console.error(c.red(e.stack ?? String(e))); process.exit(1); });
+main().catch(e => {
+  // human-readable, not raw stack
+  console.error(humanError(e, "running chameleye"));
+  process.exit(1);
+});
