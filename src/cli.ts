@@ -328,36 +328,28 @@ function help(cmd?: string) {
 
 function welcome() {
   const g = c.green, b = c.bold, d = c.dim, cy = c.cyan, y = c.yellow;
-  // dot-matrix chameleye eye — green dots, yellow pupil, white highlight
-  const dot = g("●"), pup = y("●"), hi = c.bold("○");
-  const eye = [
-    `                     ${g("●●●●●●●●")}`,
-    `                 ${g("●●●●●●●●●●●●●●●●")}`,
-    `              ${g("●●●●●●")}  ${dot}${dot}${dot}${dot}${dot}  ${g("●●●●●●")}`,
-    `            ${g("●●●●●")}   ${dot}${dot}${pup}${pup}${hi}${dot}${dot}   ${g("●●●●●")}`,
-    `           ${g("●●●●")}   ${dot}${dot}${pup}${pup}${pup}${hi}${dot}${dot}   ${g("●●●●")}`,
-    `            ${g("●●●●●")}   ${dot}${dot}${pup}${hi}${dot}${dot}   ${g("●●●●●")}`,
-    `              ${g("●●●●●●")}  ${dot}${dot}${dot}${dot}${dot}  ${g("●●●●●●")}`,
-    `                 ${g("●●●●●●●●●●●●●●●●")}`,
-    `                     ${g("●●●●●●●●")}`,
-  ];
+  // title-focused — no eye, pure typographic 360° flow (related to ChamelEye title)
   console.log("");
-  for (const l of eye) console.log("  " + l);
-  console.log("  " + b(g("      👁️  ChamelEye — 360° vision")) + d("  •  dot-eye in CLI  ✨"));
+  console.log(b(g("  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")));
+  console.log(b(g("  ┃")) + b("   C H A M E L E Y E  ") + y("— 360° vision") + b(g("              ┃")));
+  console.log(b(g("  ┃")) + d("   See where your code, data & requests actually go      ") + b(g("┃")));
+  console.log(b(g("  ┃")) + d("   ────────────────────────────────────────────────     ") + b(g("┃")));
+  console.log(b(g("  ┃")) + `   ${g("○")} ${d("→")} ${cy("API")} ${d("→")} ${cy("Service")} ${d("→")} ${g("▣")}  ${d("360° panoramic")}  ` + b(g("          ┃")));
+  console.log(b(g("  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")));
   console.log("");
   const line = g("─".repeat(62));
   console.log(g("┌" + line + "┐"));
   console.log(g("│") + b(g("  ChamelEye  — 360° vision for your codebase  ")) + g("      │"));
-  console.log(g("│") + d("  Like a chameleon eye, see every flow independently  ") + g("    │"));
+  console.log(g("│") + d("  360° panoramic — see every flow independently       ") + g("    │"));
   console.log(g("├" + line + "┤"));
-  console.log(g("│") + `  ${cy("◆ architecture")}  ${d("panoramic")}      ${cy("◆ trace")}  ${d("focus eye")}   ${y("✨ animate")} ${d("dots")} ` + g("│"));
+  console.log(g("│") + `  ${cy("◆ architecture")}  ${d("panoramic")}      ${cy("◆ trace")}  ${d("focus flow")}  ${y("✨ animate")} ${d("dots")} ` + g("│"));
   console.log(g("│") + `  ${cy("◆ insights")}    ${d("auto-insights")}    ${cy("◆ heatmap")} ${d("coupling")}    ${cy("◆ check")} ${d("guard")}   ` + g("│"));
   console.log(g("│") + `  ${cy("◆ impact")}      ${d("blast")}          ${cy("◆ circular")} ${d("cycles")}    ${cy("◆ doctor")} ${d("setup")} ` + g("│"));
   console.log(g("└" + line + "┘"));
   console.log("");
   console.log(b("  Quick navigate:") + d("  (type number or command, q to quit)"));
   console.log(`  ${g("[1]")} ${cy("status")} ${y("★ daily")}  ${g("[2]")} ${cy("architecture")} ${d("vision")}  ${g("[3]")} ${cy("trace")} ${d("flow")}  ${g("[4]")} ${cy("animate")} ${y("✨")}`);
-  console.log(`  ${g("[5]")} ${cy("insights")} ${y("👁️")}  ${g("[6]")} ${cy("check")} ${d("layers")}  ${g("[7]")} ${cy("heatmap")} ${d("map")}  ${g("[8]")} ${cy("doctor")} ${d("ok")}`);
+  console.log(`  ${g("[5]")} ${cy("insights")} ${d("auto")}   ${g("[6]")} ${cy("check")} ${d("layers")}  ${g("[7]")} ${cy("heatmap")} ${d("map")}  ${g("[8]")} ${cy("doctor")} ${d("ok")}`);
   console.log("");
   console.log(d("  Try: ") + cy("chameleye status") + d("  •  ") + cy("chameleye trace POST /api/users") + d("  •  ") + cy("chameleye hook install"));
   console.log(d("  Docs: https://github.com/JoyalJJoy/chameleye"));

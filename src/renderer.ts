@@ -16,9 +16,10 @@ function isArchitecture(optsTitle?: string) {
 
 function renderArchitecture(g: FlowGraph, title: string): string {
   const lines: string[] = [];
-  // header with dot eye small
-  lines.push(gc.green("              ●●●●●●●●  ") + gc.bold("👁️  " + title));
-  lines.push(gc.dim("─".repeat(title.length + 10)));
+  // header — title-focused, no eye (360° flow)
+  lines.push(gc.bold(gc.green("  C H A M E L E Y E  — ") + title));
+  lines.push(gc.dim("─".repeat(title.length + 14)));
+  lines.push(gc.dim("  360° vision  •  ○ → API → Service → ▣"));
   lines.push("");
   // layer order — most visual for devs
   const layerOrder: [string, string][] = [
