@@ -128,160 +128,173 @@ function didYouMean(input: string, list: string[]) {
 }
 
 function help(cmd?: string) {
-  if (cmd === "trace" || cmd === "eye") return `
-${c.bold(`chameleye trace`)} — focus one eye on a flow ${c.dim("(alias: eye)")}
-Usage: chameleye trace <route|function> [opts]
-
-  ${c.cyan("POST /api/orders")}         route trace (Express/Next)
-  ${c.cyan("function OrderService.createOrder")}  function/method trace
-  ${c.cyan("OrderService")}             fragment search
-
-Opts: --format terminal|mermaid|json|svg  --depth 10  --output <file>  --verbose
-Ex:   chameleye trace POST /api/users --format mermaid --output flow.mmd
-      chameleye trace function UserService.createUser --depth 5`.trim();
-  if (cmd === "architecture" || cmd === "vision") return `
-${c.bold("chameleye architecture")} — panoramic system map ${c.dim("(alias: vision)")}
-Usage: chameleye architecture [opts]
-Opts: --format terminal|mermaid|json  --output <file>
-Shows import + call graph grouped by layer (controllers/services/repos).`.trim();
-  if (cmd === "check") return `
-${c.bold("chameleye check")} — architecture guard (CI-friendly)
-Usage: chameleye check [--strict] [--output <file>]
-
-Rules (default):
-  Controller → Service → Repository → Database
-Violations:
-  ✗ Controller → Database (should go via Service→Repository)
-  ✗ Controller → Repository (skips Service)
-  ✗ Service → Controller (circular layer)
-  ✗ Repository → Controller/Service
-
-Exit code 1 if violations. --strict fails on warnings too.`.trim();
-  if (cmd === "circular") return `
-${c.bold("chameleye circular")} — find import & call cycles
-Usage: chameleye circular [--format terminal|json] [--output <file>]
-
-Detects A→B→A among files (IMPORT) and functions (CALL).`.trim();
-  if (cmd === "impact" || cmd === "blast") return `
-${c.bold("chameleye impact")} ${c.dim("(alias: blast)")} — blast radius of a change
-Usage: chameleye impact <name> [--depth 10]
-Ex: chameleye impact UserService.updateUser
-Shows reverse dependents + risk summary (routes/queues affected).`.trim();
-  if (cmd === "doctor") return `
-${c.bold("chameleye doctor")} — validate setup
-Checks Node version, tsconfig, files scanned, route detection.`.trim();
-  if (cmd === "login" || cmd === "logout") return `
-${c.bold(`chameleye ${cmd}`)} — auth (local-first, no cloud)
-Usage: chameleye ${cmd}
-
-${cmd === "logout" ? "Clears local session (no-op, chameleye is local-first, no telemetry)." : "No login needed — runs 100% locally, no upload."}
-System status: ${cmd === "logout" ? c.green("logged out") : c.green("local, no auth required")}`.trim();
-  if (cmd === "insights") return `
-${c.bold("chameleye insights")} — exciting auto-insights 👁️
-Usage: chameleye insights [--format json]
-
-Finds: central service (most dependents), deepest flow, busiest route, orphan routes, DB hotspots.`.trim();
-  if (cmd === "animate") return `
-${c.bold("chameleye animate")} — animate a flow with moving dots ✨
-Usage: chameleye animate <route|function> [--speed 120]
-Ex: chameleye animate POST /api/users
-Shows ● flowing through the trace in terminal (Ctrl+C to stop).`.trim();
-  if (cmd === "heatmap") return `
-${c.bold("chameleye heatmap")} — coupling heatmap
-Usage: chameleye heatmap [--format json|terminal] [--output <file>]
-Shows which services are most coupled (afferent/efferent).
-Opts: --format terminal|json  --output <file>`.trim();
-  if (cmd === "init") return `
-${c.bold("chameleye init")} — create config ${c.dim("(zero-config by default)")}
-Usage: chameleye init
-
-Creates ${c.cyan("chameleye.config.ts")} (alias ${c.cyan("flowmap.config.ts")} supported):
-  export default { project: { root: "." }, analysis: { include: ["src/**"], exclude: ["node_modules/**"] } }
-No args. Exits if config already exists.`.trim();
-  if (cmd === "dependencies" || cmd === "deps") return `
-${c.bold("chameleye dependencies")} ${c.dim("(alias: deps)")} — what it depends on
-Usage: chameleye dependencies <name> [opts]
-  <name>  service/function/file fragment (case-insensitive)
-Opts: --format terminal|mermaid|json  --output <file>
-Ex: chameleye dependencies OrderService
-    chameleye deps UserService.createUser --format mermaid`.trim();
-  if (cmd === "dependents" || cmd === "rdeps") return `
-${c.bold("chameleye dependents")} ${c.dim("(alias: rdeps)")} — what depends on it (reverse)
-Usage: chameleye dependents <name> [opts]
-  <name>  service/function/file fragment
-Opts: --format terminal|mermaid|json  --output <file>
-Ex: chameleye dependents OrderService
-    chameleye rdeps UserRepository --format json`.trim();
-  if (cmd === "data" || cmd === "flow") return `
-${c.bold("chameleye data")} ${c.dim("(alias: flow)")} — track where data travels ${c.yellow("[stub]")}
-Usage: chameleye data <field> [opts]
-  <field>  e.g. user.email, request.userId, order.total
-Opts: --format terminal|json  --output <file>
-Note: Full taint analysis in Phase 2 — currently shows architecture stub.
-Ex: chameleye data user.email
-    chameleye flow order.total`.trim();
-  if (cmd === "dead") return `
-${c.bold("chameleye dead")} — find dead code (no callers)
-Usage: chameleye dead [--format terminal|json] [--output <file>]
-
-Finds FUNCTION/METHOD with 0 incoming CALL (excludes route handlers).
-Ex: chameleye dead --format json`.trim();
-  if (cmd === "explain") return `
-${c.bold("chameleye explain")} — human-readable steps for a flow
-Usage: chameleye explain <route|function> [opts]
-  <route>  e.g. POST /api/orders, GET /health
-  <function>  e.g. OrderService.createOrder
-Opts: --format terminal|mermaid|json  --output <file>
-Ex: chameleye explain POST /api/users
-    chameleye explain function UserService.createUser`.trim();
-  if (cmd === "serve" || cmd === "watch") return `
-${c.bold(`chameleye ${cmd}`)} — ${cmd === "serve" ? "interactive web viewer" : "live re-analyze"} ${c.yellow("[coming soon]")}
-Usage: chameleye ${cmd} [opts]
-${cmd === "serve" ? "Starts local viewer at http://localhost:3000" : "Re-analyzes on file change and refreshes"}
-Opts: --port 3000  --format terminal  --output <file>
-Note: Stub in 0.1.0 — static + watch coming in Phase 4.`.trim();
-  return `
-${c.bold(`ChamelEye ${VERSION} 👁️`)} — 360° vision for your codebase (like a chameleon eye).
-${c.dim("Alias: flowmap — both bins work")}
-
-${c.bold("Usage:")} chameleye <command> [target] [options]
-
-${c.bold("Commands:")}
-  ${c.cyan("init")}                          create chameleye.config.ts
-  ${c.cyan("architecture, vision")}          panoramic system map
-  ${c.cyan("trace, eye")} <route|fn>         focus one flow — ${c.dim("try: trace POST /api/users")}
-  ${c.cyan("animate")} <route|fn>            ${c.yellow("✨ animate flow with moving dots")}
-  ${c.cyan("insights")}                      ${c.yellow("👁️  exciting auto-insights")}
-  ${c.cyan("heatmap")}                       coupling heatmap
-  ${c.cyan("dependencies, deps")} <name>     what it depends on
-  ${c.cyan("dependents, rdeps")} <name>      what depends on it
-  ${c.cyan("impact, blast")} <name>          blast radius + risk
-  ${c.cyan("explain")} <target>              human steps (numbered)
-  ${c.cyan("data, flow")} <field>            data travel (stub)
-  ${c.cyan("check")}                         architecture guard — ${c.dim("Controller→Service→Repo→DB")}
-  ${c.cyan("circular")}                      find cycles
-  ${c.cyan("dead")}                          find dead code
-  ${c.cyan("doctor")}                        validate setup
-  ${c.cyan("login, logout")}                 ${c.dim("local-first auth (no cloud)")}
-  ${c.cyan("serve, watch")}                  ${c.dim("web viewer / live (coming soon)")}
-
-${c.bold("Options:")}
-  --format <terminal|mermaid|json|svg>  ${c.dim("default: terminal")}
-  --output <file>                       ${c.dim("write to file instead of stdout")}
-  --depth <n>                           ${c.dim("BFS depth, default 10")}
-  --verbose                             ${c.dim("debug logs")}
-  --no-color                            ${c.dim("disable ANSI")}
-  -h, --help   -v, --version
-
-${c.bold("Examples:")}
-  chameleye architecture --format mermaid --output arch.mmd
-  chameleye trace POST /api/orders --output trace.json --format json
-  chameleye check --strict              ${c.dim("fail CI on violations")}
-  chameleye circular
-  flowmap trace POST /api/orders        ${c.dim("# alias still works")}
-
-${c.dim("Docs: https://github.com/JoyalJJoy/chameleye  •  ")}
-`.trim();
+  // skim-friendly: chunks, short paragraphs (≤3 sentences, 50-75 chars), lists + minimal icons
+  const h = (t: string) => c.bold(t);
+  const u = (s: string) => c.dim(s);
+  if (cmd === "trace" || cmd === "eye") return [
+    `${h("chameleye trace")} ${u("— focus one eye (alias: eye)")}`,
+    `${h("Usage:")} chameleye trace <route|function> [options]`,
+    `${h("Arguments:")}`,
+    `  • ${c.cyan("POST /api/orders")} — route trace`,
+    `  • ${c.cyan("function OrderService.createOrder")} — method`,
+    `  • ${c.cyan("OrderService")} — fragment search`,
+    `${h("Options:")}`,
+    `  • --format terminal|mermaid|json|svg`,
+    `  • --depth 10  ${u("— BFS depth")}`,
+    `  • --output <file>  ${u("— write to file")}`,
+    `${h("Examples:")}`,
+    `  • chameleye trace POST /api/users --format mermaid`,
+    `  • chameleye trace function UserService.createUser`,
+  ].join("\n");
+  if (cmd === "architecture" || cmd === "vision") return [
+    `${h("chameleye architecture")} ${u("(alias: vision) — panoramic map")}`,
+    `${h("Usage:")} chameleye architecture [options]`,
+    `${h("Options:")}`,
+    `  • --format terminal|mermaid|json`,
+    `  • --output <file>`,
+    `${h("Shows:")} import + call graph by layer.`,
+    `${h("Try:")} chameleye architecture --output arch.mmd`,
+  ].join("\n");
+  if (cmd === "check") return [
+    `${h("chameleye check")} — guard layers`,
+    `${h("Usage:")} chameleye check [--strict] [--output <file>]`,
+    `${h("Rule:")} Controller → Service → Repository → Database`,
+    `${h("Violations:")}`,
+    `  • ${c.red("✗")} Controller → Database`,
+    `  • ${c.red("✗")} Controller → Repository`,
+    `  • ${c.red("✗")} Service → Controller`,
+    `${h("Exit:")} 1 if violations.`,
+  ].join("\n");
+  if (cmd === "circular") return [
+    `${h("chameleye circular")} — find cycles`,
+    `${h("Usage:")} chameleye circular [--format json] [--output <file>]`,
+    `${h("Finds:")} A→B→A via IMPORT and CALL.`,
+    `${h("Try:")} chameleye circular --format json`,
+  ].join("\n");
+  if (cmd === "impact" || cmd === "blast") return [
+    `${h("chameleye impact")} ${u("(alias: blast) — blast radius")}`,
+    `${h("Usage:")} chameleye impact <name> [--depth 10]`,
+    `${h("Ex:")} chameleye impact UserService.updateUser`,
+    `${h("Shows:")} reverse dependents + risk.`,
+  ].join("\n");
+  if (cmd === "doctor") return [
+    `${h("chameleye doctor")} — validate setup`,
+    `${h("Usage:")} chameleye doctor`,
+    `${h("Checks:")} Node, files, routes, DB, config.`,
+  ].join("\n");
+  if (cmd === "login" || cmd === "logout") return [
+    `${h(`chameleye ${cmd}`)} — local-first auth`,
+    `${h("Usage:")} chameleye ${cmd}`,
+    `${h("Note:")} Runs locally, no upload.`,
+    `${h("Status:")} ${cmd === "logout" ? c.green("logged out") : c.green("local")}`,
+  ].join("\n");
+  if (cmd === "insights") return [
+    `${h("chameleye insights")} — auto-insights 👁️`,
+    `${h("Usage:")} chameleye insights [--format json]`,
+    `${h("Finds:")}`,
+    `  • central service`,
+    `  • deepest flow`,
+    `  • DB hotspot`,
+  ].join("\n");
+  if (cmd === "animate") return [
+    `${h("chameleye animate")} — moving dots ✨`,
+    `${h("Usage:")} chameleye animate <route|fn> [--speed 120]`,
+    `${h("Ex:")} chameleye animate POST /api/users`,
+    `${h("Shows:")} ● flowing — Ctrl+C to stop.`,
+  ].join("\n");
+  if (cmd === "heatmap") return [
+    `${h("chameleye heatmap")} — coupling`,
+    `${h("Usage:")} chameleye heatmap [--format json]`,
+    `${h("Shows:")} afferent ← efferent bars.`,
+  ].join("\n");
+  if (cmd === "init") return [
+    `${h("chameleye init")} — create config`,
+    `${h("Usage:")} chameleye init`,
+    `${h("Creates:")} chameleye.config.ts`,
+    `  ${u("alias flowmap.config.ts")}`,
+    `${h("Note:")} Zero-config by default.`,
+  ].join("\n");
+  if (cmd === "dependencies" || cmd === "deps") return [
+    `${h("chameleye dependencies")} ${u("(alias: deps)")}`,
+    `${h("Usage:")} chameleye dependencies <name> [options]`,
+    `${h("Args:")} <name> — fragment, case-insensitive`,
+    `${h("Options:")} --format, --output`,
+    `${h("Ex:")} chameleye deps OrderService`,
+  ].join("\n");
+  if (cmd === "dependents" || cmd === "rdeps") return [
+    `${h("chameleye dependents")} ${u("(alias: rdeps) — reverse")}`,
+    `${h("Usage:")} chameleye dependents <name> [options]`,
+    `${h("Args:")} <name> — fragment`,
+    `${h("Ex:")} chameleye rdeps UserRepository`,
+  ].join("\n");
+  if (cmd === "data" || cmd === "flow") return [
+    `${h("chameleye data")} ${u("(alias: flow) [stub]")}`,
+    `${h("Usage:")} chameleye data <field> [options]`,
+    `${h("Args:")} <field> — e.g. user.email`,
+    `${h("Note:")} Full taint in Phase 2.`,
+  ].join("\n");
+  if (cmd === "dead") return [
+    `${h("chameleye dead")} — dead code`,
+    `${h("Usage:")} chameleye dead [--format json]`,
+    `${h("Finds:")} 0 callers, excludes handlers.`,
+  ].join("\n");
+  if (cmd === "explain") return [
+    `${h("chameleye explain")} — human steps`,
+    `${h("Usage:")} chameleye explain <route|fn> [options]`,
+    `${h("Args:")} <route> or <function>`,
+    `${h("Ex:")} chameleye explain POST /api/users`,
+  ].join("\n");
+  if (cmd === "serve" || cmd === "watch") return [
+    `${h(`chameleye ${cmd}`)} ${u("[coming soon]")}`,
+    `${h("Usage:")} chameleye ${cmd} [options]`,
+    `${h("Note:")} Phase 4 — static for now.`,
+  ].join("\n");
+  // global — chunked for skim-readers: short paragraphs, lists, minimal icons (• → ✔)
+  return [
+    `${h(`ChamelEye ${VERSION} 👁️`)} ${u("— 360° vision")}`,
+    `${u("Alias: flowmap — both bins work")}`,
+    ``,
+    `${h("Usage:")}`,
+    `  chameleye <command> [target] [options]`,
+    `  chameleye trace POST /api/users --format mermaid`,
+    ``,
+    `${h("Explore:")}`,
+    `  • ${c.cyan("init")} — create config`,
+    `  • ${c.cyan("architecture, vision")} — panoramic map`,
+    `  • ${c.cyan("trace, eye")} <route|fn> — focus one flow`,
+    `  • ${c.cyan("animate")} <route|fn> — moving dots`,
+    ``,
+    `${h("Analyze:")}`,
+    `  • ${c.cyan("dependencies, deps")} <name> — what it depends on`,
+    `  • ${c.cyan("dependents, rdeps")} <name> — reverse`,
+    `  • ${c.cyan("impact, blast")} <name> — blast radius`,
+    `  • ${c.cyan("explain")} <target> — human steps`,
+    ``,
+    `${h("Guard:")}`,
+    `  • ${c.cyan("check")} — layer guard`,
+    `  • ${c.cyan("circular")} — find cycles`,
+    `  • ${c.cyan("dead")} — dead code`,
+    `  • ${c.cyan("insights")} — auto-insights`,
+    `  • ${c.cyan("heatmap")} — coupling bars`,
+    ``,
+    `${h("System:")}`,
+    `  • ${c.cyan("doctor")} — validate setup`,
+    `  • ${c.cyan("data, flow")} <field> — track data [stub]`,
+    `  • ${c.cyan("login, logout")} — local auth`,
+    ``,
+    `${h("Options:")}`,
+    `  • --format terminal|mermaid|json|svg`,
+    `  • --output <file>`,
+    `  • --depth <n>  ${u("— BFS depth")}`,
+    `  • --verbose  ${u("— debug")}`,
+    ``,
+    `${h("Examples:")}`,
+    `  • chameleye architecture --output arch.mmd`,
+    `  • chameleye trace POST /api/orders --format json`,
+    `  • chameleye check --strict`,
+    ``,
+    `${u("Docs: https://github.com/JoyalJJoy/chameleye  •  ")}`,
+  ].join("\n");
 }
 
 function welcome() {
