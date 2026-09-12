@@ -21,6 +21,16 @@ const c = {
 };
 const vlog = (m: string) => { if (isVerbose) console.error(c.dim(`[verbose] ${m}`)); };
 
+// reaction for every action — equal & appropriate, clearly highlighting system status
+function react(ok: "success" | "warn" | "error" | "info", title: string, hint?: string, opts?: Record<string,string>) {
+  const icon = ok === "success" ? c.green("✔") : ok === "warn" ? c.yellow("⚠") : ok === "error" ? c.red("✗") : c.cyan("ℹ");
+  const msg = `${icon} ${title}` + (hint ? `\n  ${c.dim("→ " + hint)}` : "");
+  // for json/mermaid, don't pollute stdout — use stderr
+  const fmt = (opts?.format ?? "terminal").toLowerCase();
+  if (fmt !== "terminal") console.error(msg);
+  else console.log(msg);
+}
+
 // progress visuals — spinner + bar + steps (stderr, not polluting stdout for --format json)
 function createProgress() {
   const enabled = process.stderr.isTTY && !args.includes("--no-progress") && !process.argv.includes("--no-progress");
@@ -67,7 +77,7 @@ function createProgress() {
 }
 
 // -- commands list for didYouMean
-const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch","insights","animate","heatmap","tour"];
+const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch","insights","animate","heatmap","tour","login","logout"];
 
 function lev(a: string, b: string) {
   const m = Array.from({ length: a.length + 1 }, (_, i) => Array(b.length + 1).fill(0));
@@ -129,6 +139,12 @@ Shows reverse dependents + risk summary (routes/queues affected).`.trim();
   if (cmd === "doctor") return `
 ${c.bold("chameleye doctor")} — validate setup
 Checks Node version, tsconfig, files scanned, route detection.`.trim();
+  if (cmd === "login" || cmd === "logout") return `
+${c.bold(`chameleye ${cmd}`)} — auth (local-first, no cloud)
+Usage: chameleye ${cmd}
+
+${cmd === "logout" ? "Clears local session (no-op, chameleye is local-first, no telemetry)." : "No login needed — runs 100% locally, no upload."}
+System status: ${cmd === "logout" ? c.green("logged out") : c.green("local, no auth required")}`.trim();
   if (cmd === "insights") return `
 ${c.bold("chameleye insights")} — exciting auto-insights 👁️
 Usage: chameleye insights [--format json]
@@ -215,6 +231,7 @@ ${c.bold("Commands:")}
   ${c.cyan("circular")}                      find cycles
   ${c.cyan("dead")}                          find dead code
   ${c.cyan("doctor")}                        validate setup
+  ${c.cyan("login, logout")}                 ${c.dim("local-first auth (no cloud)")}
   ${c.cyan("serve, watch")}                  ${c.dim("web viewer / live (coming soon)")}
 
 ${c.bold("Options:")}
@@ -410,7 +427,7 @@ async function main() {
 
   if (!ALL_CMDS.includes(cmdRaw) && !["help","version"].includes(cmdRaw) && !cmdRaw.startsWith("-")) {
     const sug = didYouMean(cmdRaw, ALL_CMDS);
-    console.error(c.red(`Unknown command: ${cmdRaw}`) + (sug ? c.dim(` — did you mean ${c.cyan(sug)}?`) : ""));
+    react("error", `Unknown command: ${cmdRaw}`, sug ? `did you mean ${sug}? → chameleye ${sug} --help` : "Try: chameleye --help");
     console.log(help());
     process.exit(1);
   }
@@ -432,10 +449,13 @@ async function main() {
   if (cmd === "init") {
     const cfgPath = path.join(cwd, "chameleye.config.ts");
     const legacy = path.join(cwd, "flowmap.config.ts");
-    if (fs.existsSync(cfgPath) || fs.existsSync(legacy)) { console.log(c.yellow(`Already exists: ${fs.existsSync(cfgPath) ? cfgPath : legacy}`)); return; }
+    if (fs.existsSync(cfgPath) || fs.existsSync(legacy)) {
+      react("warn", `Already exists: ${fs.existsSync(cfgPath) ? cfgPath : legacy}`, "System still ready — try: chameleye architecture", opts);
+      return;
+    }
     const tpl = `export default {\n  project: { root: "." },\n  analysis: { include: ["src/**"], exclude: ["node_modules/**", "dist/**"] },\n  integrations: { postgres: true, redis: true, kafka: true }\n};\n`;
     fs.writeFileSync(cfgPath, tpl);
-    console.log(c.green(`✓ Created ${cfgPath}`) + c.dim(" (alias flowmap.config.ts also supported)"));
+    react("success", `Created ${cfgPath}`, "Next: chameleye architecture → chameleye trace POST /api/users", opts);
     return;
   }
 
@@ -455,6 +475,17 @@ async function main() {
     console.log(`  Config: ${fs.existsSync(path.join(cwd,"chameleye.config.ts"))||fs.existsSync(path.join(cwd,"flowmap.config.ts"))? c.green("present"):c.dim("none (zero-config ok)")}`);
     console.log(`  TS: ${c.green("ok")}  : ${fs.existsSync(path.join(cwd,".opencode/opencode.json"))? c.green("active"):c.dim("—")}`);
     if (g0.nodes.length===0) console.log(c.yellow("\n⚠ No nodes — check include globs / run from project root"));
+    const healthy = hasRoutes && g0.nodes.length > 5;
+    react(healthy ? "success" : "warn", healthy ? "System healthy — ready to trace" : "System idle — no routes detected", healthy ? "Next: chameleye trace POST /api/users" : "Try: chameleye architecture --verbose", opts);
+    return;
+  }
+
+  if (cmd === "logout") {
+    react("success", "Logged out — local session cleared", "System status: local-first, no telemetry · chameleye never uploads code", opts);
+    return;
+  }
+  if (cmd === "login") {
+    react("info", "No login needed — chameleye runs 100% locally", "System status: local, no auth required · try: chameleye doctor", opts);
     return;
   }
 
@@ -470,8 +501,7 @@ async function main() {
   if (useProg) prog.succeed(`Analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes, ${g.edges.length} edges ${c.dim(`(${Date.now()-t0}ms)`)}`);
   else vlog(`analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes ${g.edges.length} edges ${Date.now()-t0}ms`);
   if (g.nodes.length===0) {
-    console.error(c.yellow("No nodes found. Is this a TypeScript/JS project? Try:"));
-    console.error(c.dim("  chameleye doctor\n  chameleye init"));
+    react("error", "No nodes found — not a TypeScript/JS project?", "Try: chameleye doctor  →  chameleye init", opts);
     process.exit(1);
   }
 
@@ -482,7 +512,7 @@ async function main() {
     title = `Architecture — ${path.basename(cwd)} (${g.meta?.filesScanned} files)`;
   } else if (cmd === "trace") {
     const target = posClean.join(" ").trim();
-    if (!target) { console.error(c.red("trace needs target: e.g. trace POST /api/orders")); console.log(help("trace")); process.exit(1); }
+    if (!target) { react("error", "trace needs target", "Try: chameleye trace POST /api/users  or  chameleye trace function OrderService.create", opts); console.log(help("trace")); process.exit(1); }
     let startIds: string[] = [];
     if (/^(GET|POST|PUT|DELETE|PATCH|USE|ALL)\s+\//i.test(target)) {
       const norm = target.toUpperCase().replace(/\s+/g, " ").trim();
@@ -517,7 +547,7 @@ async function main() {
     else outGraph = { nodes: [], edges: [], meta: g.meta };
   } else if (cmd === "dependencies" || cmd === "dependents") {
     const name = posClean.join(" ").trim();
-    if (!name) { console.error(c.red(`${cmd} needs a name e.g. ${cmd} OrderService`)); process.exit(1); }
+    if (!name) { react("error", `${cmd} needs a name`, `Try: chameleye ${cmd} OrderService`, opts); process.exit(1); }
     const hits = g.nodes.filter(n => n.name.toLowerCase().includes(name.toLowerCase())).slice(0, 1);
     if (hits.length === 0) { 
       const sug = didYouMean(name, g.nodes.map(n=>n.name));
@@ -537,7 +567,7 @@ async function main() {
     }
   } else if (cmd === "impact") {
     const name = posClean.join(" ").trim();
-    if (!name) { console.error(c.red("impact needs a name")); process.exit(1); }
+    if (!name) { react("error", "impact needs a name", "Try: chameleye impact UserService.updateUser", opts); process.exit(1); }
     const hits = g.nodes.filter(n => n.name.toLowerCase().includes(name.toLowerCase())).slice(0, 1);
     if (hits.length === 0) { 
       const sug = didYouMean(name, g.nodes.map(n=>n.name));
@@ -571,7 +601,7 @@ async function main() {
     }
   } else if (cmd === "data") {
     const field = posClean.join(" ").trim();
-    console.log(c.yellow(`(stub) data flow for "${field}" — full taint in Phase 2. Showing architecture for now.\n`));
+    react("warn", `data flow for "${field}" is stub`, "Full taint in Phase 2 — showing architecture for now", opts);
     title = `Data ${field} (stub)`;
   } else if (cmd === "explain") {
     const target = posClean.join(" ").trim();
@@ -583,8 +613,8 @@ async function main() {
       startIds = g.nodes.filter(n => n.name.toLowerCase().includes(target.toLowerCase())).slice(0, 1).map(n => n.id);
     }
     const sg = startIds.length ? subgraphFrom(g, startIds, depth) : g;
-    if (format === "json") { writeOutput(renderJson(sg), opts); return; }
-    if (format === "mermaid") { writeOutput(renderMermaid(sg), opts); return; }
+    if (format === "json") { writeOutput(renderJson(sg), opts); react("success", `Explained ${target} — ${sg.nodes.length} steps`, `Next: chameleye trace ${target}`, opts); return; }
+    if (format === "mermaid") { writeOutput(renderMermaid(sg), opts); react("success", `Explained ${target} — ${sg.nodes.length} steps`, `Next: chameleye trace ${target}`, opts); return; }
     const adj = new Map<string, string[]>();
     for (const e of sg.edges) { if (!adj.has(e.from)) adj.set(e.from, []); adj.get(e.from)!.push(e.to); }
     const order: string[] = [];
@@ -598,6 +628,7 @@ async function main() {
       out += `${c.cyan(String(i + 1))}. ${n.name}${n.file ? c.dim(` (${n.file}${n.line? `:${n.line}`:""})`) : ""} — ${n.type.toLowerCase()}\n`;
     });
     writeOutput(out.trim(), opts);
+    react("success", `Explained ${target} — ${order.length} steps`, `Next: chameleye trace ${target} --format mermaid`, opts);
     return;
   } else if (cmd === "check") {
     const viols = runCheck(g);
@@ -648,12 +679,13 @@ async function main() {
     const hasIncoming = new Set(g.edges.filter(e=>e.type==="CALL").map(e=>e.to));
     const routeHandlers = new Set(g.edges.filter(e=>e.type==="CALL" && e.label==="handler").map(e=>e.to));
     const dead = g.nodes.filter(n=> (n.type==="FUNCTION"||n.type==="METHOD") && !hasIncoming.has(n.id) && !routeHandlers.has(n.id) && n.name!=="query");
-    if (dead.length===0) writeOutput(c.green("✓ No dead functions found"), opts);
+    if (dead.length===0) { writeOutput(c.green("✓ No dead functions found"), opts); react("success", "No dead code — system clean", "Next: chameleye circular", opts); }
     else {
       let out = c.yellow(`⚠ Dead code: ${dead.length} function(s) with no callers\n\n`);
       for (const d of dead.slice(0,20)) out += `  ${c.dim("•")} ${d.name}  ${c.dim(d.file? `(${d.file}:${d.line})`:"")}\n`;
       if (dead.length>20) out += c.dim(`  … +${dead.length-20} more\n`);
       writeOutput(out, opts);
+      react("warn", `Found ${dead.length} dead functions`, "Remove or wire them — check: chameleye trace <name>", opts);
     }
     return;
   } else if (cmd === "insights") {
@@ -697,10 +729,11 @@ async function main() {
     }
     out += `\n${c.dim("Try: chameleye animate POST /api/users  •  chameleye heatmap  •  chameleye check")}`;
     writeOutput(out, opts);
+    react("success", `Insights complete — ${routeNodes.length} routes, ${funcNodes.length} funcs`, `System scanned → ${g.nodes.length} nodes`, opts);
     return;
   } else if (cmd === "heatmap") {
     const services = g.nodes.filter(n=>n.type==="SERVICE"||n.type==="CONTROLLER"||n.type==="REPOSITORY");
-    if (services.length===0) { writeOutput(c.yellow("No services/controllers found for heatmap"), opts); return; }
+    if (services.length===0) { writeOutput(c.yellow("No services/controllers found for heatmap"), opts); react("warn", "No heatmap — no services found", "System has no layered services", opts); return; }
     let out = c.bold(c.green(" coupling heatmap ")) + c.dim("(afferent ←  efferent →)\n") + c.dim("─".repeat(50)) + "\n";
     const max = Math.max(1, ...services.map(s=> g.edges.filter(e=>e.from===s.id).length + g.edges.filter(e=>e.to===s.id).length));
     for (const s of services.slice(0,12)) {
@@ -715,7 +748,8 @@ async function main() {
     if (format==="json") {
       const data = services.map(s=>({ name: s.name, file: s.file, afferent: g.edges.filter(e=>e.to===s.id).length, efferent: g.edges.filter(e=>e.from===s.id).length }));
       writeOutput(JSON.stringify(data, null, 2), opts);
-    } else writeOutput(out, opts);
+      react("success", `Heatmap complete — ${services.length} services`, `Most coupled: ${services[0]?.name || "—"}`, opts);
+    } else { writeOutput(out, opts); react("success", `Heatmap complete — ${services.length} services`, `Next: chameleye insights`, opts); }
     return;
   } else if (cmd === "animate") {
     const target = posClean.join(" ").trim() || "POST /api/users";
@@ -805,6 +839,14 @@ async function main() {
     content = isVerbose ? `${base}\n${c.dim(`\n[${g.meta?.filesScanned} files, ${g.nodes.length} nodes, ${g.edges.length} edges, ${Date.now()-t0}ms]`)}` : base;
   }
   writeOutput(content, opts);
+  // reaction for every action — equal & appropriate, clearly highlighting system status
+  if (["architecture","trace","dependencies","dependents","impact"].includes(cmd)) {
+    const summary = `${outGraph.nodes.length} nodes, ${outGraph.edges.length} edges`;
+    const hint = cmd === "architecture" ? "Next: chameleye trace POST /api/users  •  chameleye check" : cmd === "trace" ? "Next: chameleye animate " + (posClean.join(" ") || "POST /api/users") + "  •  chameleye explain" : `Next: chameleye impact ${posClean[0] || "OrderService"}`;
+    react("success", `${cmd} complete — ${summary}`, hint, opts);
+  } else if (cmd === "data") {
+    react("warn", `data stub complete`, "Full taint coming in Phase 2", opts);
+  }
 }
 
 main().catch(e => { console.error(c.red(e.stack ?? String(e))); process.exit(1); });
