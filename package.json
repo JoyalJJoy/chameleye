@@ -1,9 +1,10 @@
 {
-  "name": "flowmap",
+  "name": "chameleye",
   "version": "0.1.0",
-  "description": "See where your code, data, and requests actually go — architecture debugger for TypeScript/JS",
+  "description": "ChamelEye — 360° vision for your codebase. Like a chameleon eye, see every execution & data flow independently. Architecture debugger for TypeScript/JS",
   "type": "module",
   "bin": {
+    "chameleye": "./dist/cli.js",
     "flowmap": "./dist/cli.js"
   },
   "scripts": {
@@ -13,12 +14,12 @@
     "test": "node --test dist/**/*.test.js",
     "lint": "tsc --noEmit"
   },
-  "keywords": ["cli", "architecture", "visualization", "typescript", "static-analysis", "data-flow"],
+  "keywords": ["cli", "chameleon", "architecture", "visualization", "typescript", "static-analysis", "data-flow", "eye", "360"],
   "license": "MIT",
   "author": "Joyal J Joy",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/flowmap"
+    "url": "https://github.com/JoyalJJoy/chameleye"
   },
   "engines": {
     "node": ">=18"

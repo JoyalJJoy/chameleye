@@ -11,14 +11,14 @@ const cwd = process.cwd();
 
 function help() {
   return `
-FlowMap ${VERSION} — See where your code, data, and requests actually go.
+ChamelEye ${VERSION} 👁️ — 360° vision for your codebase (like a chameleon eye).
 
-Usage: flowmap <command> [target] [options]
+Usage: chameleye <command> [target] [options]   (alias: flowmap)
 
 Commands:
-  init                          create flowmap.config.ts
-  architecture                  overall system map
-  trace <target>                trace request/function flow
+  init                          create chameleye.config.ts
+  architecture                  overall system map — panoramic view
+  trace <target>                trace request/function flow — focus one eye
                                 e.g. trace POST /api/orders
                                      trace function OrderService.createOrder
                                      trace OrderService
@@ -35,9 +35,10 @@ Options:
   --version, -v
 
 Examples:
-  flowmap architecture
-  flowmap trace POST /api/orders --format mermaid
-  flowmap trace function UserService.create --format json
+  chameleye architecture
+  chameleye trace POST /api/orders --format mermaid
+  chameleye trace function UserService.create --format json
+  flowmap trace POST /api/orders            # alias still works
 `.trim();
 }
 
@@ -68,11 +69,12 @@ async function main() {
   const depth = parseInt(opts.depth ?? "10", 10);
 
   if (cmd === "init") {
-    const cfgPath = path.join(cwd, "flowmap.config.ts");
-    if (fs.existsSync(cfgPath)) { console.log(`Already exists: ${cfgPath}`); return; }
+    const cfgPath = path.join(cwd, "chameleye.config.ts");
+    const legacy = path.join(cwd, "flowmap.config.ts");
+    if (fs.existsSync(cfgPath) || fs.existsSync(legacy)) { console.log(`Already exists: ${fs.existsSync(cfgPath) ? cfgPath : legacy}`); return; }
     const tpl = `export default {\n  project: { root: "." },\n  analysis: { include: ["src/**"], exclude: ["node_modules/**", "dist/**"] },\n  integrations: { postgres: true, redis: true, kafka: true }\n};\n`;
     fs.writeFileSync(cfgPath, tpl);
-    console.log(`Created ${cfgPath}`);
+    console.log(`Created ${cfgPath} (alias flowmap.config.ts also supported)`);
     return;
   }
 

@@ -1,6 +1,8 @@
-# FlowMap — See where your code, data, and requests actually go.
+# ChamelEye 👁️ — 360° vision for your codebase
 
-> A local-first CLI that turns source code into explorable execution & data-flow maps.
+> Like a chameleon eye that moves independently to see everything — ChamelEye sees where your code, data, and requests actually go.
+
+Previously called **FlowMap** — renamed to reflect the chameleon-eye philosophy: independent, panoramic, precise flow vision.
 
 ```
 Client
@@ -14,9 +16,11 @@ AuthMiddleware → OrderController → OrderService ─┬─► InventoryServic
                                                 └─► OrderRepository → PostgreSQL
 ```
 
-## Why
+## Why ChamelEye?
 
-Traditional diagrams show *what exists*. FlowMap shows *what happens when you do X*:
+Chameleons see 360° with eyes that move independently. Your architecture should be the same — see every flow from every angle without moving the whole head (reading the whole codebase).
+
+Traditional diagrams show *what exists*. ChamelEye shows *what happens when you do X*:
 
 * What runs when this endpoint is called?
 * Where does `user.email` travel?
@@ -28,20 +32,22 @@ No source upload, no LLM required. Static analysis first, runtime later.
 ## Quick start
 
 ```bash
-npm install -g flowmap        # soon
+npm install -g chameleye        # soon: npm view chameleye
 # or local dev
-git clone https://github.com/your-org/flowmap
-cd flowmap && npm install && npm run build
+git clone https://github.com/JoyalJJoy/chameleye
+cd chameleye && npm install && npm run build
 
-flowmap init                  # creates flowmap.config.ts
-flowmap architecture          # overall system map
-flowmap trace POST /api/orders        # request flow
-flowmap trace POST /api/orders --format mermaid
-flowmap trace POST /api/orders --format json
-flowmap dependencies OrderService
-flowmap dependents OrderService
-flowmap impact UserService.updateUser
+chameleye init                  # creates chameleye.config.ts (flowmap.config.ts also supported)
+chameleye architecture          # overall system map — panoramic view
+chameleye trace POST /api/orders        # request flow — focus one eye
+chameleye trace POST /api/orders --format mermaid
+chameleye trace POST /api/orders --format json
+chameleye dependencies OrderService     # what it sees
+chameleye dependents OrderService       # what sees it
+chameleye impact UserService.updateUser # what breaks if you move
 ```
+
+`flowmap` still works as an alias: `flowmap trace ...` → `chameleye trace ...`
 
 ## MVP scope (current)
 
@@ -51,9 +57,9 @@ flowmap impact UserService.updateUser
 - [x] Route detection (Express, Next.js)
 - [x] Heuristic layer detection (controller/service/repository)
 - [x] Terminal renderer, Mermaid & JSON exporters
-- [ ] DB/Redis/Kafka detectors
-- [ ] `flowmap serve` web UI
-- [ ] Runtime tracer
+- [ ] DB/Redis/Kafka deep detectors
+- [ ] `chameleye serve` web UI — interactive 360° viewer
+- [ ] Runtime tracer (`--runtime`)
 
 See [PRD.md](./PRD.md) for full vision & roadmap. See `examples/` for tested fixtures.
 
@@ -63,13 +69,14 @@ See [PRD.md](./PRD.md) for full vision & roadmap. See `examples/` for tested fix
 Source Code → Parser (ts AST) → Code Model → Dependency Graph → Flow Engine → Renderer
                                       ↓
                                   FlowGraph { nodes, edges }  → terminal | mermaid | json | svg
+                    (chameleon eye = independent subgraphs per flow)
 ```
 
 Every edge has `confidence` (high = static proof, low = inferred). Unknowns are shown as `?` — never fake a flow.
 
 ## Config
 
-Zero-config works for Express/Next.js. Optional `flowmap.config.ts`:
+Zero-config works for Express/Next.js. Optional `chameleye.config.ts` (or legacy `flowmap.config.ts`):
 
 ```ts
 export default {
@@ -79,16 +86,15 @@ export default {
 }
 ```
 
-Respects `.gitignore` + `.flowmapignore`.
+Respects `.gitignore` + `.chameleyeignore` + `.flowmapignore`.
 
 ## Open source
 
-MIT. Local-first, no telemetry by default. Contributions welcome — see `CONTRIBUTING.md` (coming).
+MIT. Local-first, no telemetry by default. Contributions welcome.
 
 ## Principle
 
-> Never hide uncertainty. Show what you know, mark what you infer, admit what you can't tell.
+> Never hide uncertainty. A chameleon eye doesn't pretend — it shows what it sees, marks what it infers, admits what it can't.
 
 ---
 
- 
