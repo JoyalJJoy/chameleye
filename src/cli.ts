@@ -108,7 +108,7 @@ function createProgress() {
 }
 
 // -- commands list for didYouMean
-const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","insights","animate","heatmap","login","logout","status","daily","hook","completion","clean"];
+const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","insights","animate","heatmap","login","logout","status","daily","hook","completion","clean","diff","tour","ask","export"];
 
 function lev(a: string, b: string) {
   const m = Array.from({ length: a.length + 1 }, (_, i) => Array(b.length + 1).fill(0));
@@ -267,6 +267,29 @@ function help(cmd?: string) {
     `${h("Usage:")} chameleye clean`,
     `${h("Clears:")} .chameleye/cache.json`,
   ].join("\n");
+  if (cmd === "diff") return [
+    `${h("chameleye diff")} — architecture diff ✨`,
+    `${h("Usage:")} chameleye diff [branch] [--format json]`,
+    `${h("Compares:")} current vs previous (or branch)`,
+    `${h("Shows:")} ${c.green("added")} / ${c.red("removed")} nodes & edges`,
+  ].join("\n");
+  if (cmd === "tour") return [
+    `${h("chameleye tour")} — guided onboarding ✨`,
+    `${h("Usage:")} chameleye tour`,
+    `${h("Walks:")} architecture → routes → trace → insights`,
+    `${h("Use:")} First day on a new codebase`,
+  ].join("\n");
+  if (cmd === "ask") return [
+    `${h("chameleye ask")} — natural language ✨`,
+    `${h("Usage:")} chameleye ask "where does user.email go?"`,
+    `${h("Tries:")} data flow, trace, dependencies`,
+    `${h("Ex:")} chameleye ask "what breaks if I change OrderService?"`,
+  ].join("\n");
+  if (cmd === "export") return [
+    `${h("chameleye export")} — static HTML report`,
+    `${h("Usage:")} chameleye export html --output report.html`,
+    `${h("Creates:")} self-contained 360° report with mermaid`,
+  ].join("\n");
   // global — chunked for skim-readers: short paragraphs, lists, minimal icons (• → ✔)
   return [
     `${h(`ChamelEye ${VERSION} 👁️`)} ${u("— 360° vision")}`,
@@ -305,6 +328,12 @@ function help(cmd?: string) {
     `  • ${c.cyan("hook")} — git pre-commit`,
     `  • ${c.cyan("completion")} <shell> — completions`,
     `  • ${c.cyan("clean")} — clear cache`,
+    ``,
+    `${h("Amazing:")}`,
+    `  • ${c.cyan("diff")} [branch] — diff vs prev ${c.yellow("✨")}`,
+    `  • ${c.cyan("tour")} — guided tour ${c.yellow("✨")}`,
+    `  • ${c.cyan("ask")} "question" — NL query ${c.yellow("✨")}`,
+    `  • ${c.cyan("export")} html — static report`,
     ``,
     `${h("Options:")}`,
     `  • --format terminal|mermaid|json|svg`,
@@ -578,9 +607,9 @@ async function main() {
   if (cmd === "completion") {
     const shell = (posClean[0] || "bash").toLowerCase();
     const shells: Record<string,string> = {
-      bash: `# chameleye bash completion\n_chameleye() { local cmds="init architecture trace animate insights heatmap dependencies dependents impact explain data check circular dead doctor login logout status hook completion clean"; COMPREPLY=( $(compgen -W "$cmds" -- "\${COMP_WORDS[COMP_CWORD]}") ); }\ncomplete -F _chameleye chameleye\ncomplete -F _chameleye flowmap`,
-      zsh: `#compdef chameleye\n_chameleye() { local -a cmds; cmds=(init architecture trace animate insights heatmap dependencies dependents impact explain data check circular dead doctor status hook completion clean); _describe 'chameleye' cmds; }\ncompdef _chameleye chameleye; compdef _chameleye flowmap`,
-      fish: `complete -c chameleye -f -a init -d "create config"\ncomplete -c chameleye -f -a architecture -d "panoramic map"\ncomplete -c chameleye -f -a trace -d "focus flow"\ncomplete -c chameleye -f -a check -d "guard layers"\ncomplete -c chameleye -f -a circular -d "find cycles"\ncomplete -c chameleye -f -a doctor -d "validate"\ncomplete -c chameleye -f -a status -d "daily dashboard"`,
+      bash: `# chameleye bash completion\n_chameleye() { local cmds="init architecture trace animate insights heatmap dependencies dependents impact explain data check circular dead doctor login logout status hook completion clean diff tour ask export"; COMPREPLY=( $(compgen -W "$cmds" -- "\${COMP_WORDS[COMP_CWORD]}") ); }\ncomplete -F _chameleye chameleye\ncomplete -F _chameleye flowmap`,
+      zsh: `#compdef chameleye\n_chameleye() { local -a cmds; cmds=(init architecture trace animate insights heatmap dependencies dependents impact explain data check circular dead doctor status hook completion clean diff tour ask export); _describe 'chameleye' cmds; }\ncompdef _chameleye chameleye; compdef _chameleye flowmap`,
+      fish: `complete -c chameleye -f -a init -d "create config"\ncomplete -c chameleye -f -a architecture -d "panoramic map"\ncomplete -c chameleye -f -a trace -d "focus flow"\ncomplete -c chameleye -f -a diff -d "diff vs prev"\ncomplete -c chameleye -f -a tour -d "guided tour"\ncomplete -c chameleye -f -a ask -d "ask natural"\ncomplete -c chameleye -f -a check -d "guard layers"\ncomplete -c chameleye -f -a circular -d "find cycles"\ncomplete -c chameleye -f -a doctor -d "validate"\ncomplete -c chameleye -f -a status -d "daily dashboard"`,
     };
     const script = shells[shell] || shells.bash;
     if (!shells[shell]) react("warn", `Unknown shell: ${shell}`, "Try: bash, zsh, fish", opts);
@@ -634,10 +663,190 @@ async function main() {
     process.exit(1);
   }
 
+  // save for next diff — keep previous for amazing diff feature (S-rank)
+  try {
+    const prevPath = path.join(cwd, ".chameleye", "prev.json");
+    const basePath = path.join(cwd, ".chameleye", "base.json");
+    if (!fs.existsSync(basePath)) {
+      fs.mkdirSync(path.dirname(basePath), { recursive: true });
+      fs.writeFileSync(basePath, JSON.stringify({ graph: g, at: new Date().toISOString() }));
+    }
+    if (cmd !== "diff") {
+      fs.mkdirSync(path.dirname(prevPath), { recursive: true });
+      fs.writeFileSync(prevPath, JSON.stringify({ graph: g, at: new Date().toISOString() }));
+    }
+  } catch {}
+
   let outGraph: FlowGraph = g;
   let title: string | undefined;
 
-  if (cmd === "architecture") {
+  if (cmd === "diff") {
+    const target = posClean[0] || "prev";
+    let prev: FlowGraph | null = null;
+    let prevLabel = "previous";
+    try {
+      if (target === "prev" || target === "previous" || !target.includes("/")) {
+        const p = path.join(cwd, ".chameleye", "prev.json");
+        if (fs.existsSync(p)) {
+          const j = JSON.parse(fs.readFileSync(p, "utf8"));
+          prev = (j.graph || j) as FlowGraph;
+        }
+        // also try base if prev missing
+        if (!prev) {
+          const b = path.join(cwd, ".chameleye", "base.json");
+          if (fs.existsSync(b)) {
+            const j = JSON.parse(fs.readFileSync(b, "utf8"));
+            prev = (j.graph || j) as FlowGraph;
+            prevLabel = "base";
+          }
+        }
+      }
+    } catch {}
+    if (!prev) {
+      react("warn", "No previous graph found", "Run chameleye architecture first, then change code and run diff", opts);
+      writeOutput(renderTerminal(g, { title: `Diff — no previous` }), opts);
+      return;
+    }
+    const currIds = new Set(g.nodes.map(n=>n.id));
+    const prevIds = new Set(prev.nodes.map(n=>n.id));
+    const added = g.nodes.filter(n=>!prevIds.has(n.id));
+    const removed = prev.nodes.filter(n=>!currIds.has(n.id));
+    const addedEdges = g.edges.filter(e=>!prev.edges.some(pe=>pe.from===e.from && pe.to===e.to));
+    const removedEdges = prev.edges.filter(e=>!g.edges.some(ce=>ce.from===e.from && ce.to===e.to));
+    let out = c.bold(c.green("✨ ChamelEye Diff — ")) + c.dim(`${prevLabel} → current`) + "\n" + c.dim("─".repeat(50)) + "\n\n";
+    out += `  ${c.green(`+ Added: ${added.length} nodes, ${addedEdges.length} edges`)}\n`;
+    out += `  ${c.red(`- Removed: ${removed.length} nodes, ${removedEdges.length} edges`)}\n`;
+    const unchanged = g.nodes.length - added.length;
+    out += `  ${c.dim(`= Unchanged: ${unchanged} nodes`)}\n`;
+    if (added.length) {
+      out += `\n${c.bold("Added:")}\n`;
+      for (const n of added.slice(0,12)) out += `  ${c.green("•")} ${n.name} ${c.dim(n.file||n.type)}\n`;
+      if (added.length>12) out += c.dim(`  … +${added.length-12} more\n`);
+    }
+    if (removed.length) {
+      out += `\n${c.bold("Removed:")}\n`;
+      for (const n of removed.slice(0,12)) out += `  ${c.red("•")} ${n.name} ${c.dim(n.file||n.type)}\n`;
+      if (removed.length>12) out += c.dim(`  … +${removed.length-12} more\n`);
+    }
+    if (added.length===0 && removed.length===0) out += `\n${c.green("✔ No changes — architecture is stable")}\n`;
+    out += `\n${c.dim("Tip: chameleye diff vs previous run • chameleye hook install for PR")}`;
+    writeOutput(out, opts);
+    // save current as new prev for next diff
+    try {
+      const prevPath = path.join(cwd, ".chameleye", "prev.json");
+      fs.mkdirSync(path.dirname(prevPath), { recursive: true });
+      fs.writeFileSync(prevPath, JSON.stringify({ graph: g, at: new Date().toISOString() }));
+    } catch {}
+    react("success", `Diff complete — +${added.length}/-${removed.length} nodes`, `System: ${g.nodes.length} now vs ${prev.nodes.length} before`, opts);
+    return;
+  } else if (cmd === "tour") {
+    // guided tour — S-rank onboarding, chunked, interactive
+    const routes = g.nodes.filter(n=>n.type==="ROUTE").slice(0,5);
+    const services = g.nodes.filter(n=>n.type==="SERVICE").slice(0,3);
+    let out = c.bold(c.green("✨ ChamelEye Tour — guided onboarding\n")) + c.dim("─".repeat(48)) + "\n\n";
+    out += `${c.bold("Welcome!")} Let's walk your codebase in 4 steps:\n\n`;
+    out += `  ${c.cyan("1/4")} ${c.bold("Panoramic")} — ${g.nodes.length} nodes, ${g.edges.length} edges, ${routes.length} routes\n`;
+    out += `      ${c.dim("Try: chameleye architecture --format mermaid")}\n\n`;
+    out += `  ${c.cyan("2/4")} ${c.bold("Routes")} — what users can call:\n`;
+    for (const r of routes) out += `      ${c.green("•")} ${r.name} ${c.dim(r.file||"")}\n`;
+    if (routes.length===0) out += `      ${c.dim("No routes found — check Express/Next")}\n`;
+    out += `\n  ${c.cyan("3/4")} ${c.bold("Services")} — core logic:\n`;
+    for (const s of services) out += `      ${c.green("•")} ${s.name} ${c.dim(s.file||"")}\n`;
+    if (services.length===0) out += `      ${c.dim("No services — check naming")}\n`;
+    out += `\n  ${c.cyan("4/4")} ${c.bold("Next:")} Pick a flow to trace:\n`;
+    if (routes[0]) out += `      ${c.cyan(`chameleye trace ${routes[0].name}`)}\n`;
+    else out += `      ${c.cyan("chameleye trace POST /api/users")}\n`;
+    out += `      ${c.cyan("chameleye insights")} ${c.dim("— auto-insights")}\n`;
+    out += `      ${c.cyan("chameleye check --strict")} ${c.dim("— guard")}\n`;
+    out += `\n${c.dim("Tip: chameleye status for daily dashboard • chameleye --help for all")}`;
+    writeOutput(out, opts);
+    react("success", "Tour complete — you're onboarded", "Next: chameleye trace <route> → chameleye animate", opts);
+    return;
+  } else if (cmd === "ask") {
+    const q = posClean.join(" ").trim() || posClean.join(" ") || "";
+    if (!q) { react("error", "ask needs a question", `Try: chameleye ask "where does user.email go?"`, opts); console.log(help("ask")); process.exit(1); }
+    const lower = q.toLowerCase();
+    // very small NL router — minimal, no LLM
+    let target: string | null = null;
+    let mode: "data" | "trace" | "deps" | "impact" = "trace";
+    if (lower.includes("where does") && lower.includes("go")) {
+      const m = q.match(/where does\s+(.+?)\s+go/i);
+      target = m?.[1]?.trim().replace(/[?"]+/g, "") || null;
+      mode = "data";
+    } else if (lower.includes("what breaks") || lower.includes("impact") || lower.includes("change")) {
+      // S-rank: prefer Service/Controller/Repository names
+      const mService = q.match(/(\w+(?:Service|Controller|Repository)(?:\.\w+)?)/);
+      const mChange = q.match(/change\s+([A-Za-z0-9_.]+)/i);
+      const mLast = q.match(/([A-Za-z0-9_.]+)\s*\??$/);
+      const m = mService || mChange || (q.match(/(?:change|impact|breaks).*?(\w+(?:\.\w+)?)/i));
+      target = m?.[1]?.trim().replace(/[?"]+/g, "") || mLast?.[1]?.trim().replace(/[?"]+/g, "") || q.split(/\s+/).pop()?.replace(/[?"]+/g, "") || null;
+      mode = "impact";
+    } else if (lower.includes("depends") || lower.includes("uses")) {
+      const m = q.match(/(\w+(?:Service|Controller|Repository))/i);
+      target = m?.[1]?.trim() || null;
+      mode = "deps";
+    } else {
+      // fallback: extract last word-like token as trace target
+      const m = q.match(/(\w+\.\w+|\w+Service|\w+Controller|\/[\w\/:]+)/);
+      target = m?.[1]?.trim() || q.split(/\s+/).slice(-2).join(" ").trim();
+    }
+    if (!target) target = q;
+    let out = c.bold(c.green(`✨ Ask — "${q}"\n`)) + c.dim("─".repeat(50)) + "\n\n";
+    out += `  ${c.dim("Interpreted:")} ${c.cyan(mode)} ${c.dim("→")} ${c.bold(target)}\n\n`;
+    // route to appropriate handler via subgraph
+    if (mode === "data") {
+      const field = target;
+      // reuse data logic: just show trace for field
+      const hits = g.nodes.filter(n=>n.name.toLowerCase().includes(field.toLowerCase()) || n.file?.toLowerCase().includes(field.toLowerCase())).slice(0,5);
+      if (hits.length) {
+        out += `  ${c.dim("Found:")} ${hits.map(h=>h.name).join(", ")}\n`;
+        out += `  ${c.dim("Try:")} ${c.cyan(`chameleye data ${field}`)}\n`;
+        out += `  ${c.dim("Or:")} ${c.cyan(`chameleye trace ${hits[0].name}`)}\n`;
+      } else {
+        out += `  ${c.yellow("No direct match for")} ${c.bold(field)}\n`;
+        out += `  ${c.dim("Try:")} ${c.cyan(`chameleye trace ${field}`)}\n`;
+      }
+    } else if (mode === "impact") {
+      const hits = g.nodes.filter(n=>n.name.toLowerCase().includes(target.toLowerCase())).slice(0,1);
+      if (hits[0]) {
+        const id = hits[0].id;
+        const revAdj = new Map<string,string[]>(); for (const e of g.edges) { if (!revAdj.has(e.to)) revAdj.set(e.to, []); revAdj.get(e.to)!.push(e.from); }
+        const visited = new Set([id]); const qq: string[]=[id]; while(qq.length){ const cur=qq.shift()!; for(const prev of revAdj.get(cur)??[]) if(!visited.has(prev)){ visited.add(prev); qq.push(prev);} }
+        out += `  ${c.dim("Impact:")} ${c.bold(hits[0].name)} → ${c.yellow(String(visited.size-1))} dependents\n`;
+        out += `  ${c.dim("Try:")} ${c.cyan(`chameleye impact ${target}`)}\n`;
+      } else out += `  ${c.yellow("No match for")} ${c.bold(target)}\n`;
+    } else {
+      const hits = g.nodes.filter(n=>n.name.toLowerCase().includes(target.toLowerCase())).slice(0,3);
+      if (hits[0]) {
+        const sg = subgraphFrom(g, [hits[0].id], depth);
+        out += `  ${c.dim("Trace:")} ${c.bold(hits[0].name)} → ${sg.nodes.length} nodes\n`;
+        for (const n of sg.nodes.slice(0,6)) out += `    ${c.dim("•")} ${n.name} ${c.dim(n.file||n.type)}\n`;
+        if (sg.nodes.length>6) out += c.dim(`    … +${sg.nodes.length-6} more\n`);
+        out += `\n  ${c.dim("Try:")} ${c.cyan(`chameleye trace ${target} --format mermaid`)}\n`;
+      } else out += `  ${c.yellow("No match for")} ${c.bold(target)}\n`;
+    }
+    out += `\n${c.dim("Tip: chameleye trace, data, impact, or ask again")}`;
+    writeOutput(out, opts);
+    react("success", `Ask complete — interpreted as ${mode}`, `Target: ${target}`, opts);
+    return;
+  } else if (cmd === "export") {
+    const sub = (posClean[0] || "html").toLowerCase();
+    if (sub === "html") {
+      const htmlPath = opts.output || "chameleye-report.html";
+      const mermaid = renderMermaid(g);
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>ChamelEye — 360° Report</title><script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script><style>body{font-family:system-ui, sans-serif; max-width:900px; margin:40px auto; padding:20px; background:#0a0a0a; color:#e5e7eb} h1{color:#22c55e} .box{border:1px solid #22c55e; padding:16px; border-radius:8px; margin:16px 0} pre{background:#111; padding:12px; border-radius:6px; overflow:auto}</style></head><body><h1>👁️ ChamelEye — 360° Report</h1><div class="box"><strong>Nodes:</strong> ${g.nodes.length} | <strong>Edges:</strong> ${g.edges.length} | <strong>Generated:</strong> ${new Date().toISOString()}</div><div class="mermaid">${mermaid}</div><script>mermaid.initialize({startOnLoad:true, theme:"dark"});</script><pre>${mermaid.replace(/</g,"&lt;")}</pre></body></html>`;
+      const p = path.resolve(cwd, htmlPath);
+      try {
+        fs.mkdirSync(path.dirname(p), { recursive: true });
+        fs.writeFileSync(p, html);
+        react("success", `Exported HTML report`, `${p} — ${html.length} bytes`, opts);
+      } catch (e) { console.error(humanError(e, `exporting ${p}`)); process.exit(1); }
+      return;
+    } else {
+      react("error", `Unknown export: ${sub}`, "Try: chameleye export html --output report.html", opts);
+      process.exit(1);
+    }
+  } else if (cmd === "architecture") {
     title = `Architecture — ${path.basename(cwd)} (${g.meta?.filesScanned} files)`;
   } else if (cmd === "trace") {
     const target = posClean.join(" ").trim();
