@@ -21,6 +21,8 @@
     "type": "git",
     "url": "https://github.com/JoyalJJoy/chameleye"
   },
+  "homepage": "https://github.com/JoyalJJoy/chameleye#readme",
+  "files": ["dist", "README.md", "LICENSE", "chameleye.config.ts", "flowmap.config.ts"],
   "engines": {
     "node": ">=18"
   },
