@@ -96,8 +96,58 @@ Ex: chameleye animate POST /api/users
 Shows ● flowing through the trace in terminal (Ctrl+C to stop).`.trim();
   if (cmd === "heatmap") return `
 ${c.bold("chameleye heatmap")} — coupling heatmap
-Usage: chameleye heatmap [--format json]
-Shows which services are most coupled (afferent/efferent).`.trim();
+Usage: chameleye heatmap [--format json|terminal] [--output <file>]
+Shows which services are most coupled (afferent/efferent).
+Opts: --format terminal|json  --output <file>`.trim();
+  if (cmd === "init") return `
+${c.bold("chameleye init")} — create config ${c.dim("(zero-config by default)")}
+Usage: chameleye init
+
+Creates ${c.cyan("chameleye.config.ts")} (alias ${c.cyan("flowmap.config.ts")} supported):
+  export default { project: { root: "." }, analysis: { include: ["src/**"], exclude: ["node_modules/**"] } }
+No args. Exits if config already exists.`.trim();
+  if (cmd === "dependencies" || cmd === "deps") return `
+${c.bold("chameleye dependencies")} ${c.dim("(alias: deps)")} — what it depends on
+Usage: chameleye dependencies <name> [opts]
+  <name>  service/function/file fragment (case-insensitive)
+Opts: --format terminal|mermaid|json  --output <file>
+Ex: chameleye dependencies OrderService
+    chameleye deps UserService.createUser --format mermaid`.trim();
+  if (cmd === "dependents" || cmd === "rdeps") return `
+${c.bold("chameleye dependents")} ${c.dim("(alias: rdeps)")} — what depends on it (reverse)
+Usage: chameleye dependents <name> [opts]
+  <name>  service/function/file fragment
+Opts: --format terminal|mermaid|json  --output <file>
+Ex: chameleye dependents OrderService
+    chameleye rdeps UserRepository --format json`.trim();
+  if (cmd === "data" || cmd === "flow") return `
+${c.bold("chameleye data")} ${c.dim("(alias: flow)")} — track where data travels ${c.yellow("[stub]")}
+Usage: chameleye data <field> [opts]
+  <field>  e.g. user.email, request.userId, order.total
+Opts: --format terminal|json  --output <file>
+Note: Full taint analysis in Phase 2 — currently shows architecture stub.
+Ex: chameleye data user.email
+    chameleye flow order.total`.trim();
+  if (cmd === "dead") return `
+${c.bold("chameleye dead")} — find dead code (no callers)
+Usage: chameleye dead [--format terminal|json] [--output <file>]
+
+Finds FUNCTION/METHOD with 0 incoming CALL (excludes route handlers).
+Ex: chameleye dead --format json`.trim();
+  if (cmd === "explain") return `
+${c.bold("chameleye explain")} — human-readable steps for a flow
+Usage: chameleye explain <route|function> [opts]
+  <route>  e.g. POST /api/orders, GET /health
+  <function>  e.g. OrderService.createOrder
+Opts: --format terminal|mermaid|json  --output <file>
+Ex: chameleye explain POST /api/users
+    chameleye explain function UserService.createUser`.trim();
+  if (cmd === "serve" || cmd === "watch") return `
+${c.bold(`chameleye ${cmd}`)} — ${cmd === "serve" ? "interactive web viewer" : "live re-analyze"} ${c.yellow("[coming soon]")}
+Usage: chameleye ${cmd} [opts]
+${cmd === "serve" ? "Starts local viewer at http://localhost:3000" : "Re-analyzes on file change and refreshes"}
+Opts: --port 3000  --format terminal  --output <file>
+Note: Stub in 0.1.0 — static + watch coming in Phase 4.`.trim();
   return `
 ${c.bold(`ChamelEye ${VERSION} 👁️`)} — 360° vision for your codebase (like a chameleon eye).
 ${c.dim("Alias: flowmap — both bins work")}
@@ -118,7 +168,9 @@ ${c.bold("Commands:")}
   ${c.cyan("data, flow")} <field>            data travel (stub)
   ${c.cyan("check")}                         architecture guard — ${c.dim("Controller→Service→Repo→DB")}
   ${c.cyan("circular")}                      find cycles
+  ${c.cyan("dead")}                          find dead code
   ${c.cyan("doctor")}                        validate setup
+  ${c.cyan("serve, watch")}                  ${c.dim("web viewer / live (coming soon)")}
 
 ${c.bold("Options:")}
   --format <terminal|mermaid|json|svg>  ${c.dim("default: terminal")}
