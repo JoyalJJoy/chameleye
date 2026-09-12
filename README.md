@@ -52,16 +52,30 @@ chameleye doctor                        # validate setup (Node, routes, DB)
 
 `flowmap` still works as an alias: `flowmap trace ...` → `chameleye trace ...`
 
+## Daily — S-rank workflow (2s, cache ⚡)
+
+```bash
+chameleye status                    # daily dashboard — health + insights + guard (cached)
+chameleye trace POST /api/users     # before each change — see flow
+chameleye impact OrderService       # before commit — blast radius
+chameleye check --strict            # in CI / pre-commit
+chameleye hook install              # S-rank: guard on every commit (→ .git/hooks/pre-commit)
+chameleye completion zsh > _chameleye  # tab complete (bash|zsh|fish)
+chameleye clean                     # clear .chameleye/cache.json
+# 2nd run is instant ⚡ via .chameleye/cache.json — --no-cache to bypass
+```
+
 ## MVP scope (current)
 
 - [x] CLI skeleton (`init`, `architecture`/`vision`, `trace`/`eye`, `dependencies`, `dependents`, `impact`/`blast`, `explain`, `data`/`flow`, `check`, `circular`, `doctor`)
-- [x] CLI design: per-command help, `--output`, `--verbose`, `--no-color`, colors (ANSI, no deps), did-you-mean
+- [x] CLI design: per-command help, `--output`, `--verbose`, `--no-color`, colors (ANSI, no deps), did-you-mean, progress (spinner+bar+steps), reactions for every action, human-readable errors, skim-friendly chunks
 - [x] TypeScript/JavaScript AST (imports, functions, calls) — `setParentNodes:true`
 - [x] Import graph + call graph → `FlowGraph` with confidence
 - [x] Route detection (Express, Next.js)
 - [x] Heuristic layer detection (controller/service/repository)
-- [x] Terminal renderer, Mermaid & JSON exporters + `--output` file
-- [x] Architecture guard (`check`) + circular + dead code
+- [x] Terminal renderer (layered green boxes + dot eye), Mermaid subgraphs + `--output` file
+- [x] Architecture guard (`check`) + circular + dead code + insights/heatmap/animate
+- [x] **S-rank daily**: `status` dashboard, `.chameleye/cache.json` instant ⚡, `hook` pre-commit, `completion` bash|zsh|fish, `clean`
 - [ ] DB/Redis/Kafka deep detectors
 - [ ] `chameleye serve` web UI — interactive 360° viewer
 - [ ] Runtime tracer (`--runtime`)

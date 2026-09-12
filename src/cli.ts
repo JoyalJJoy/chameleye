@@ -6,7 +6,7 @@ import { analyzeProject } from "./analyzer.js";
 import { subgraphFrom, FlowGraph } from "./graph.js";
 import { renderTerminal, renderMermaid, renderJson } from "./renderer.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 const args = process.argv.slice(2);
 const cwd = process.cwd();
 const useColor = process.stdout.isTTY && !args.includes("--no-color") && !process.env.NO_COLOR;
@@ -108,7 +108,7 @@ function createProgress() {
 }
 
 // -- commands list for didYouMean
-const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch","insights","animate","heatmap","tour","login","logout"];
+const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch","insights","animate","heatmap","tour","login","logout","status","daily","hook","completion","clean"];
 
 function lev(a: string, b: string) {
   const m = Array.from({ length: a.length + 1 }, (_, i) => Array(b.length + 1).fill(0));
@@ -249,6 +249,29 @@ function help(cmd?: string) {
     `${h("Usage:")} chameleye ${cmd} [options]`,
     `${h("Note:")} Phase 4 — static for now.`,
   ].join("\n");
+  if (cmd === "status" || cmd === "daily") return [
+    `${h("chameleye status")} ${u("(alias: daily) — daily dashboard")}`,
+    `${h("Usage:")} chameleye status [--format json]`,
+    `${h("Shows:")} health + insights + next actions.`,
+    `${h("Use:")} Daily standup, PR pre-check.`,
+  ].join("\n");
+  if (cmd === "hook") return [
+    `${h("chameleye hook")} — git integration`,
+    `${h("Usage:")} chameleye hook install | uninstall`,
+    `${h("Installs:")} .git/hooks/pre-commit → chameleye check`,
+    `${h("Try:")} chameleye hook install`,
+  ].join("\n");
+  if (cmd === "completion") return [
+    `${h("chameleye completion")} — shell completions`,
+    `${h("Usage:")} chameleye completion <bash|zsh|fish>`,
+    `${h("Ex:")} chameleye completion zsh > _chameleye`,
+    `${h("Or:")} eval "$(chameleye completion bash)"`,
+  ].join("\n");
+  if (cmd === "clean") return [
+    `${h("chameleye clean")} — clear cache`,
+    `${h("Usage:")} chameleye clean`,
+    `${h("Clears:")} .chameleye/cache.json`,
+  ].join("\n");
   // global — chunked for skim-readers: short paragraphs, lists, minimal icons (• → ✔)
   return [
     `${h(`ChamelEye ${VERSION} 👁️`)} ${u("— 360° vision")}`,
@@ -281,6 +304,12 @@ function help(cmd?: string) {
     `  • ${c.cyan("doctor")} — validate setup`,
     `  • ${c.cyan("data, flow")} <field> — track data [stub]`,
     `  • ${c.cyan("login, logout")} — local auth`,
+    ``,
+    `${h("Daily:")}`,
+    `  • ${c.cyan("status, daily")} — dashboard ${c.yellow("★ daily")}`,
+    `  • ${c.cyan("hook")} — git pre-commit`,
+    `  • ${c.cyan("completion")} <shell> — completions`,
+    `  • ${c.cyan("clean")} — clear cache`,
     ``,
     `${h("Options:")}`,
     `  • --format terminal|mermaid|json|svg`,
@@ -327,10 +356,10 @@ function welcome() {
   console.log(g("└" + line + "┘"));
   console.log("");
   console.log(b("  Quick navigate:") + d("  (type number or command, q to quit)"));
-  console.log(`  ${g("[1]")} ${cy("architecture")} ${d("vision")}  ${g("[2]")} ${cy("trace")} ${d("flow")}  ${g("[3]")} ${cy("animate")} ${y("✨")}  ${g("[4]")} ${cy("insights")} ${y("👁️")}`);
-  console.log(`  ${g("[5]")} ${cy("check")} ${d("layers")}  ${g("[6]")} ${cy("circular")} ${d("cycles")}  ${g("[7]")} ${cy("heatmap")} ${d("map")}  ${g("[8]")} ${cy("doctor")} ${d("ok")}`);
+  console.log(`  ${g("[1]")} ${cy("status")} ${y("★ daily")}  ${g("[2]")} ${cy("architecture")} ${d("vision")}  ${g("[3]")} ${cy("trace")} ${d("flow")}  ${g("[4]")} ${cy("animate")} ${y("✨")}`);
+  console.log(`  ${g("[5]")} ${cy("insights")} ${y("👁️")}  ${g("[6]")} ${cy("check")} ${d("layers")}  ${g("[7]")} ${cy("heatmap")} ${d("map")}  ${g("[8]")} ${cy("doctor")} ${d("ok")}`);
   console.log("");
-  console.log(d("  Try: ") + cy("chameleye animate POST /api/users") + d("  •  ") + cy("chameleye insights"));
+  console.log(d("  Try: ") + cy("chameleye status") + d("  •  ") + cy("chameleye trace POST /api/users") + d("  •  ") + cy("chameleye hook install"));
   console.log(d("  Docs: https://github.com/JoyalJJoy/chameleye"));
   console.log("");
 }
@@ -346,8 +375,8 @@ async function interactiveWelcome() {
   while (true) {
     const ans = (await ask(c.cyan("› ") + "Select " + c.green("[1-6]") + c.dim(" or type command ") + c.dim("(q to quit): "))).trim().toLowerCase();
     if (!ans || ans === "q" || ans === "quit" || ans === "exit") { rl.close(); break; }
-    // number map — matches welcome [1-8]
-    const map: Record<string, string> = { "1": "architecture", "2": "trace", "3": "animate", "4": "insights", "5": "check", "6": "circular", "7": "heatmap", "8": "doctor" };
+    // number map — matches welcome [1-8] S-rank daily first
+    const map: Record<string, string> = { "1": "status", "2": "architecture", "3": "trace", "4": "animate", "5": "insights", "6": "check", "7": "heatmap", "8": "doctor" };
     let cmd = map[ans] ?? ans;
     // handle trace/animate without target -> prompt for it
     if (cmd === "trace" || cmd === "eye" || cmd === "animate") {
@@ -548,6 +577,50 @@ async function main() {
   }
   if (cmd === "login") {
     react("info", "No login needed — chameleye runs 100% locally", "System status: local, no auth required · try: chameleye doctor", opts);
+    return;
+  }
+  if (cmd === "clean") {
+    const p = path.join(cwd, ".chameleye", "cache.json");
+    if (fs.existsSync(p)) {
+      try { fs.unlinkSync(p); react("success", "Cache cleared", `${p} removed — next run will be fresh`, opts); } catch (e) { console.error(humanError(e, "clearing cache")); process.exit(1); }
+    } else {
+      react("info", "No cache to clear", "System already clean — .chameleye/cache.json not found", opts);
+    }
+    return;
+  }
+  if (cmd === "completion") {
+    const shell = (posClean[0] || "bash").toLowerCase();
+    const shells: Record<string,string> = {
+      bash: `# chameleye bash completion\n_chameleye() { local cmds="init architecture trace animate insights heatmap dependencies dependents impact explain data check circular dead doctor login logout status hook completion clean"; COMPREPLY=( $(compgen -W "$cmds" -- "\${COMP_WORDS[COMP_CWORD]}") ); }\ncomplete -F _chameleye chameleye\ncomplete -F _chameleye flowmap`,
+      zsh: `#compdef chameleye\n_chameleye() { local -a cmds; cmds=(init architecture trace animate insights heatmap dependencies dependents impact explain data check circular dead doctor status hook completion clean); _describe 'chameleye' cmds; }\ncompdef _chameleye chameleye; compdef _chameleye flowmap`,
+      fish: `complete -c chameleye -f -a init -d "create config"\ncomplete -c chameleye -f -a architecture -d "panoramic map"\ncomplete -c chameleye -f -a trace -d "focus flow"\ncomplete -c chameleye -f -a check -d "guard layers"\ncomplete -c chameleye -f -a circular -d "find cycles"\ncomplete -c chameleye -f -a doctor -d "validate"\ncomplete -c chameleye -f -a status -d "daily dashboard"`,
+    };
+    const script = shells[shell] || shells.bash;
+    if (!shells[shell]) react("warn", `Unknown shell: ${shell}`, "Try: bash, zsh, fish", opts);
+    writeOutput(script, opts);
+    if (!opts.output) react("success", `Completion for ${shell} generated`, `Save: chameleye completion ${shell} > ~/.config/completion && source it`, opts);
+    return;
+  }
+  if (cmd === "hook") {
+    const sub = (posClean[0] || "install").toLowerCase();
+    const hookPath = path.join(cwd, ".git", "hooks", "pre-commit");
+    if (sub === "install") {
+      const content = `#!/bin/sh\n# chameleye pre-commit — S-rank daily guard\n# runs chameleye check --strict on every commit\nchameleye check --strict || { echo "✗ chameleye check failed — fix layers before commit"; exit 1; }\n`;
+      try {
+        fs.mkdirSync(path.dirname(hookPath), { recursive: true });
+        fs.writeFileSync(hookPath, content);
+        fs.chmodSync(hookPath, 0o755);
+        react("success", "Hook installed", `${hookPath} → chameleye check --strict on commit`, opts);
+      } catch (e) { console.error(humanError(e, "installing git hook")); process.exit(1); }
+    } else if (sub === "uninstall" || sub === "remove") {
+      if (fs.existsSync(hookPath)) {
+        try { fs.unlinkSync(hookPath); react("success", "Hook removed", hookPath, opts); } catch (e) { console.error(humanError(e, "removing hook")); process.exit(1); }
+      } else react("warn", "No hook found", hookPath, opts);
+    } else {
+      react("error", `Unknown hook subcommand: ${sub}`, "Try: chameleye hook install | uninstall", opts);
+      console.log(help("hook"));
+      process.exit(1);
+    }
     return;
   }
 
@@ -888,6 +961,33 @@ async function main() {
     }, speed);
     // auto-stop after 12 seconds (exciting but not infinite)
     setTimeout(() => { clearInterval(iv); process.stdout.write("\n" + c.green("✓ flow complete — ") + c.dim("rerun: chameleye animate " + target + "\n")); process.exit(0); }, Math.min(12000, order.length*speed*2+1000));
+    return;
+  } else if (cmd === "status" || cmd === "daily") {
+    // S-rank daily dashboard — combines health + insights + guard, chunked for skim
+    const routes = g.nodes.filter(n=>n.type==="ROUTE").length;
+    const dbs = g.nodes.filter(n=>n.type==="DATABASE").length;
+    const services = g.nodes.filter(n=>["SERVICE","CONTROLLER","REPOSITORY"].includes(n.type)).length;
+    const viols = runCheck(g);
+    const hasCache = fs.existsSync(path.join(cwd, ".chameleye", "cache.json"));
+    const dot = c.green("●");
+    let out = c.bold(c.green("👁️  ChamelEye Daily — S-rank dashboard\n")) + c.dim("─".repeat(48)) + "\n\n";
+    out += `${c.bold("Health:")}\n`;
+    out += `  • Files: ${c.cyan(String(g.meta?.filesScanned))}  Nodes: ${c.cyan(String(g.nodes.length))}  Edges: ${c.cyan(String(g.edges.length))}  ${c.dim(`cached ${hasCache ? "yes ⚡" : "no"}`)}\n`;
+    out += `  • Routes: ${routes ? c.green(String(routes)) : c.yellow("0")}  Services: ${c.cyan(String(services))}  DB: ${dbs ? c.green(String(dbs)) : c.dim("none")}\n`;
+    out += `  • Guard: ${viols.length===0 ? c.green("✔ layers OK") : c.red(`✗ ${viols.length} violations`)}\n`;
+    out += `\n${c.bold("Insights:")}\n`;
+    const inDeg = new Map<string,number>(); for (const e of g.edges) inDeg.set(e.to, (inDeg.get(e.to)||0)+1);
+    const central = [...g.nodes.filter(n=>["SERVICE","CONTROLLER"].includes(n.type))].sort((a,b)=>(inDeg.get(b.id)||0)-(inDeg.get(a.id)||0))[0];
+    if (central) out += `  • Central: ${c.bold(central.name)} ${c.dim(`(${inDeg.get(central.id)||0} dependents)`)}\n`;
+    let deepest = { len: 0, route: "" }; for (const r of g.nodes.filter(n=>n.type==="ROUTE")) { const sg = subgraphFrom(g, [r.id], 20); if (sg.nodes.length > deepest.len) deepest = { len: sg.nodes.length, route: r.name }; }
+    if (deepest.route) out += `  • Deepest: ${c.bold(deepest.route)} ${c.dim(`→ ${deepest.len} nodes`)}\n`;
+    out += `\n${c.bold("Next:")}\n`;
+    out += `  • ${c.cyan("chameleye trace POST /api/users")} ${c.dim("— see a flow")}\n`;
+    out += `  • ${c.cyan("chameleye check --strict")} ${c.dim("— guard before commit")}\n`;
+    out += `  • ${c.cyan("chameleye hook install")} ${c.dim("— daily S-rank")}\n`;
+    out += `\n${c.dim("Tip: chameleye animate POST /api/users  •  chameleye doctor --verbose")}`;
+    writeOutput(out, opts);
+    react("success", "Daily dashboard — you're S-rank ready", `System: ${g.nodes.length} nodes, ${viols.length===0 ? "guard OK" : `${viols.length} violations`}`, opts);
     return;
   } else {
     const sug = didYouMean(cmd, ALL_CMDS);

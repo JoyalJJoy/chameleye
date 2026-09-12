@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as crypto from "node:crypto";
 import ts from "typescript";
 import { FlowGraph, FlowNode, FlowEdge, addNode, addEdge } from "./graph.js";
 
@@ -38,11 +39,53 @@ function fileId(file: string, root: string) {
   return "file:" + path.relative(root, file).replace(/\\/g, "/");
 }
 
+function cachePath(root: string) { return path.join(root, ".chameleye", "cache.json"); }
+function hashFiles(files: string[]): string {
+  const h = crypto.createHash("sha256");
+  for (const f of files.sort()) {
+    try {
+      const s = fs.statSync(f);
+      h.update(f);
+      h.update(String(s.mtimeMs));
+      h.update(String(s.size));
+    } catch {}
+  }
+  return h.digest("hex").slice(0, 16);
+}
+function loadCache(root: string, hash: string): FlowGraph | null {
+  try {
+    if (process.argv.includes("--no-cache")) return null;
+    const p = cachePath(root);
+    if (!fs.existsSync(p)) return null;
+    const c = JSON.parse(fs.readFileSync(p, "utf8"));
+    if (c.hash === hash && c.graph) return c.graph as FlowGraph;
+  } catch {}
+  return null;
+}
+function saveCache(root: string, hash: string, g: FlowGraph) {
+  try {
+    if (process.argv.includes("--no-cache")) return;
+    const p = cachePath(root);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, JSON.stringify({ hash, graph: g, savedAt: new Date().toISOString() }));
+  } catch {}
+}
+
 export function analyzeProject(root: string, onProgress?: (phase: string, done: number, total: number) => void): FlowGraph {
   const files: string[] = [];
   onProgress?.("Scanning files", 0, 0);
   walk(root, null, ["node_modules", "dist"], files);
   onProgress?.(`Found ${files.length} files`, files.length, files.length);
+
+  const h = hashFiles(files);
+  const cached = loadCache(root, h);
+  if (cached) {
+    onProgress?.("Cache hit — instant ⚡", files.length, files.length);
+    onProgress?.("Done", files.length, files.length);
+    // refresh meta
+    cached.meta = { ...cached.meta, root, filesScanned: files.length, generatedAt: new Date().toISOString(), cached: true } as any;
+    return cached;
+  }
 
   const g: FlowGraph = { nodes: [], edges: [], meta: { root, filesScanned: files.length, generatedAt: new Date().toISOString() } };
   const fileNodeByPath = new Map<string, string>();
@@ -256,6 +299,7 @@ export function analyzeProject(root: string, onProgress?: (phase: string, done: 
   onProgress?.("Linking graph", files.length, files.length);
   // post: ensure file->file import edges produce some connectivity for architecture view
   onProgress?.("Done", files.length, files.length);
+  saveCache(root, h, g);
   return g;
 }
 

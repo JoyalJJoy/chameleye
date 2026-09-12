@@ -1,6 +1,6 @@
 {
   "name": "chameleye",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ChamelEye — 360° vision for your codebase. Like a chameleon eye, see every execution & data flow independently. Architecture debugger for TypeScript/JS",
   "type": "module",
   "bin": {
