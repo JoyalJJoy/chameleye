@@ -108,7 +108,7 @@ function createProgress() {
 }
 
 // -- commands list for didYouMean
-const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch","insights","animate","heatmap","tour","login","logout","status","daily","hook","completion","clean"];
+const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","insights","animate","heatmap","login","logout","status","daily","hook","completion","clean"];
 
 function lev(a: string, b: string) {
   const m = Array.from({ length: a.length + 1 }, (_, i) => Array(b.length + 1).fill(0));
@@ -243,11 +243,6 @@ function help(cmd?: string) {
     `${h("Usage:")} chameleye explain <route|fn> [options]`,
     `${h("Args:")} <route> or <function>`,
     `${h("Ex:")} chameleye explain POST /api/users`,
-  ].join("\n");
-  if (cmd === "serve" || cmd === "watch") return [
-    `${h(`chameleye ${cmd}`)} ${u("[coming soon]")}`,
-    `${h("Usage:")} chameleye ${cmd} [options]`,
-    `${h("Note:")} Phase 4 — static for now.`,
   ].join("\n");
   if (cmd === "status" || cmd === "daily") return [
     `${h("chameleye status")} ${u("(alias: daily) — daily dashboard")}`,
