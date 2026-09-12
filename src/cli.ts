@@ -21,6 +21,51 @@ const c = {
 };
 const vlog = (m: string) => { if (isVerbose) console.error(c.dim(`[verbose] ${m}`)); };
 
+// progress visuals — spinner + bar + steps (stderr, not polluting stdout for --format json)
+function createProgress() {
+  const enabled = process.stderr.isTTY && !args.includes("--no-progress") && !process.argv.includes("--no-progress");
+  const frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
+  let idx = 0, timer: NodeJS.Timeout | null = null, current = "";
+  const isTermFormat = !args.includes("--format") || args.includes("terminal") || !args.some(a=> a==="json" || a==="mermaid");
+  function bar(done: number, total: number) {
+    if (total <= 0) return "";
+    const w = 16, p = Math.min(1, done/total), filled = Math.round(p*w);
+    const empty = w - filled;
+    const pct = Math.round(p*100);
+    return ` ${c.green("█".repeat(filled))}${c.dim("░".repeat(empty))} ${c.dim(`${done}/${total} ${pct}%`)}`;
+  }
+  return {
+    start(text: string) {
+      current = text;
+      if (!enabled) { console.error(c.dim(`› ${text}`)); return; }
+      timer = setInterval(() => {
+        const f = frames[idx++ % frames.length];
+        process.stderr.write(`\r${c.cyan(f)} ${current}${" ".repeat(10)}`);
+      }, 80);
+    },
+    update(phase: string, done: number, total: number) {
+      current = total ? `${phase}${bar(done,total)}` : phase;
+      if (!enabled) { if (done===total || done%16===0) console.error(c.dim(`› ${current}`)); return; }
+      // keep spinner, just update text
+    },
+    succeed(msg: string) {
+      if (timer) { clearInterval(timer); timer = null; process.stderr.write(`\r${c.green("✔")} ${msg}${" ".repeat(20)}\n`); }
+      else console.error(`${c.green("✔")} ${msg}`);
+    },
+    fail(msg: string) {
+      if (timer) { clearInterval(timer); timer = null; process.stderr.write(`\r${c.red("✗")} ${msg}\n`); }
+      else console.error(`${c.red("✗")} ${msg}`);
+    },
+    step(msg: string) {
+      if (timer) {
+        // show step as completed then continue
+        process.stderr.write(`\r${c.green("✔")} ${msg}\n`);
+        // restart spinner for next step
+      } else console.error(`${c.green("✔")} ${msg}`);
+    }
+  };
+}
+
 // -- commands list for didYouMean
 const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch","insights","animate","heatmap","tour"];
 
@@ -395,7 +440,11 @@ async function main() {
   }
 
   if (cmd === "doctor") {
-    const g0 = analyzeProject(cwd);
+    const prog0 = createProgress();
+    const useProg0 = !opts["no-progress"] && !args.includes("--no-progress") && process.stderr.isTTY;
+    if (useProg0) prog0.start("Scanning files...");
+    const g0 = analyzeProject(cwd, (p,d,t)=> { if (useProg0) prog0.update(p,d,t); else if (isVerbose) vlog(`${p} ${d}/${t}`); });
+    if (useProg0) prog0.succeed(`Scanned ${g0.meta?.filesScanned} files → ${g0.nodes.length} nodes, ${g0.edges.length} edges ${c.dim(`(${Date.now()-t0}ms)`)}`);
     const hasRoutes = g0.nodes.filter(n=>n.type==="ROUTE").length;
     const hasDb = g0.nodes.some(n=>n.type==="DATABASE");
     console.log(c.bold("ChamelEye doctor 👁️"));
@@ -409,9 +458,17 @@ async function main() {
     return;
   }
 
-  // for all other commands, analyze
-  const g = analyzeProject(cwd);
-  vlog(`analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes ${g.edges.length} edges ${Date.now()-t0}ms`);
+  // for all other commands, analyze — with visual progress (spinner + bar + steps)
+  const prog = createProgress();
+  const showProg = !opts["no-progress"] && !args.includes("--no-progress") && process.stderr.isTTY;
+  const useProg = showProg;
+  if (useProg) prog.start("Scanning files...");
+  const g = analyzeProject(cwd, (phase, done, total) => {
+    if (useProg) prog.update(phase, done, total);
+    else if (isVerbose) vlog(`${phase} ${done}/${total}`);
+  });
+  if (useProg) prog.succeed(`Analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes, ${g.edges.length} edges ${c.dim(`(${Date.now()-t0}ms)`)}`);
+  else vlog(`analyzed ${g.meta?.filesScanned} files → ${g.nodes.length} nodes ${g.edges.length} edges ${Date.now()-t0}ms`);
   if (g.nodes.length===0) {
     console.error(c.yellow("No nodes found. Is this a TypeScript/JS project? Try:"));
     console.error(c.dim("  chameleye doctor\n  chameleye init"));

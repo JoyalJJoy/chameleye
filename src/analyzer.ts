@@ -38,9 +38,11 @@ function fileId(file: string, root: string) {
   return "file:" + path.relative(root, file).replace(/\\/g, "/");
 }
 
-export function analyzeProject(root: string): FlowGraph {
+export function analyzeProject(root: string, onProgress?: (phase: string, done: number, total: number) => void): FlowGraph {
   const files: string[] = [];
+  onProgress?.("Scanning files", 0, 0);
   walk(root, null, ["node_modules", "dist"], files);
+  onProgress?.(`Found ${files.length} files`, files.length, files.length);
 
   const g: FlowGraph = { nodes: [], edges: [], meta: { root, filesScanned: files.length, generatedAt: new Date().toISOString() } };
   const fileNodeByPath = new Map<string, string>();
@@ -48,7 +50,10 @@ export function analyzeProject(root: string): FlowGraph {
   const funcByFileAndName = new Map<string, string>();
 
   // pass 1: file nodes + function/method nodes
-  for (const file of files) {
+  onProgress?.("Parsing AST", 0, files.length);
+  for (let idx = 0; idx < files.length; idx++) {
+    const file = files[idx];
+    if (idx % 8 === 0) onProgress?.("Parsing AST", idx, files.length);
     const rel = path.relative(root, file).replace(/\\/g, "/");
     const fid = fileId(file, root);
     fileNodeByPath.set(file, fid);
@@ -106,10 +111,14 @@ export function analyzeProject(root: string): FlowGraph {
     }
     visit(sf);
   }
+  onProgress?.("Parsing AST", files.length, files.length);
 
   // pass 2: imports + calls + route detection + db detection
+  onProgress?.("Linking graph", 0, files.length);
   const routeNodes: FlowNode[] = [];
-  for (const file of files) {
+  for (let idx2 = 0; idx2 < files.length; idx2++) {
+    const file = files[idx2];
+    if (idx2 % 8 === 0) onProgress?.("Linking graph", idx2, files.length);
     const rel = path.relative(root, file).replace(/\\/g, "/");
     const fid = fileId(file, root);
     let content: string;
@@ -244,7 +253,9 @@ export function analyzeProject(root: string): FlowGraph {
     }
   }
 
+  onProgress?.("Linking graph", files.length, files.length);
   // post: ensure file->file import edges produce some connectivity for architecture view
+  onProgress?.("Done", files.length, files.length);
   return g;
 }
 
