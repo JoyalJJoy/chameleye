@@ -1,0 +1,33 @@
+{
+  "name": "flowmap",
+  "version": "0.1.0",
+  "description": "See where your code, data, and requests actually go — architecture debugger for TypeScript/JS",
+  "type": "module",
+  "bin": {
+    "flowmap": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "test": "node --test dist/**/*.test.js",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": ["cli", "architecture", "visualization", "typescript", "static-analysis", "data-flow"],
+  "license": "MIT",
+  "author": "Joyal J Joy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/flowmap"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "typescript": "^5.6.3"
+  }
+}
