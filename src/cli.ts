@@ -22,7 +22,7 @@ const c = {
 const vlog = (m: string) => { if (isVerbose) console.error(c.dim(`[verbose] ${m}`)); };
 
 // -- commands list for didYouMean
-const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch"];
+const ALL_CMDS = ["init","architecture","vision","trace","eye","dependencies","deps","dependents","rdeps","impact","blast","explain","data","flow","check","circular","dead","doctor","serve","watch","insights","animate","heatmap","tour"];
 
 function lev(a: string, b: string) {
   const m = Array.from({ length: a.length + 1 }, (_, i) => Array(b.length + 1).fill(0));
@@ -84,6 +84,20 @@ Shows reverse dependents + risk summary (routes/queues affected).`.trim();
   if (cmd === "doctor") return `
 ${c.bold("chameleye doctor")} — validate setup
 Checks Node version, tsconfig, files scanned, route detection.`.trim();
+  if (cmd === "insights") return `
+${c.bold("chameleye insights")} — exciting auto-insights 👁️
+Usage: chameleye insights [--format json]
+
+Finds: central service (most dependents), deepest flow, busiest route, orphan routes, DB hotspots.`.trim();
+  if (cmd === "animate") return `
+${c.bold("chameleye animate")} — animate a flow with moving dots ✨
+Usage: chameleye animate <route|function> [--speed 120]
+Ex: chameleye animate POST /api/users
+Shows ● flowing through the trace in terminal (Ctrl+C to stop).`.trim();
+  if (cmd === "heatmap") return `
+${c.bold("chameleye heatmap")} — coupling heatmap
+Usage: chameleye heatmap [--format json]
+Shows which services are most coupled (afferent/efferent).`.trim();
   return `
 ${c.bold(`ChamelEye ${VERSION} 👁️`)} — 360° vision for your codebase (like a chameleon eye).
 ${c.dim("Alias: flowmap — both bins work")}
@@ -94,6 +108,9 @@ ${c.bold("Commands:")}
   ${c.cyan("init")}                          create chameleye.config.ts
   ${c.cyan("architecture, vision")}          panoramic system map
   ${c.cyan("trace, eye")} <route|fn>         focus one flow — ${c.dim("try: trace POST /api/users")}
+  ${c.cyan("animate")} <route|fn>            ${c.yellow("✨ animate flow with moving dots")}
+  ${c.cyan("insights")}                      ${c.yellow("👁️  exciting auto-insights")}
+  ${c.cyan("heatmap")}                       coupling heatmap
   ${c.cyan("dependencies, deps")} <name>     what it depends on
   ${c.cyan("dependents, rdeps")} <name>      what depends on it
   ${c.cyan("impact, blast")} <name>          blast radius + risk
@@ -124,23 +141,38 @@ ${c.dim("Docs: https://github.com/JoyalJJoy/chameleye  •  ")}
 
 function welcome() {
   const g = c.green, b = c.bold, d = c.dim, cy = c.cyan, y = c.yellow;
-  // green box top
-  const line = g("─".repeat(62));
+  // dot-matrix chameleye eye — green dots, yellow pupil, white highlight
+  const dot = g("●"), pup = y("●"), hi = c.bold("○");
+  const eye = [
+    `                     ${g("●●●●●●●●")}`,
+    `                 ${g("●●●●●●●●●●●●●●●●")}`,
+    `              ${g("●●●●●●")}  ${dot}${dot}${dot}${dot}${dot}  ${g("●●●●●●")}`,
+    `            ${g("●●●●●")}   ${dot}${dot}${pup}${pup}${hi}${dot}${dot}   ${g("●●●●●")}`,
+    `           ${g("●●●●")}   ${dot}${dot}${pup}${pup}${pup}${hi}${dot}${dot}   ${g("●●●●")}`,
+    `            ${g("●●●●●")}   ${dot}${dot}${pup}${hi}${dot}${dot}   ${g("●●●●●")}`,
+    `              ${g("●●●●●●")}  ${dot}${dot}${dot}${dot}${dot}  ${g("●●●●●●")}`,
+    `                 ${g("●●●●●●●●●●●●●●●●")}`,
+    `                     ${g("●●●●●●●●")}`,
+  ];
   console.log("");
+  for (const l of eye) console.log("  " + l);
+  console.log("  " + b(g("      👁️  ChamelEye — 360° vision")) + d("  •  dot-eye in CLI  ✨"));
+  console.log("");
+  const line = g("─".repeat(62));
   console.log(g("┌" + line + "┐"));
-  console.log(g("│") + b(g("  👁️  ChamelEye  — 360° vision for your codebase  ")) + g("         │"));
+  console.log(g("│") + b(g("  ChamelEye  — 360° vision for your codebase  ")) + g("      │"));
   console.log(g("│") + d("  Like a chameleon eye, see every flow independently  ") + g("    │"));
   console.log(g("├" + line + "┤"));
-  console.log(g("│") + `  ${cy("◆ architecture")}  ${d("panoramic system map")}          ${cy("◆ trace")}  ${d("focus one eye")}      ` + g("│"));
-  console.log(g("│") + `  ${cy("◆ check")}       ${d("guard layers")}                 ${cy("◆ circular")} ${d("find cycles")}      ` + g("│"));
-  console.log(g("│") + `  ${cy("◆ impact")}      ${d("blast radius")}                 ${cy("◆ doctor")}  ${d("validate setup")}   ` + g("│"));
+  console.log(g("│") + `  ${cy("◆ architecture")}  ${d("panoramic")}      ${cy("◆ trace")}  ${d("focus eye")}   ${y("✨ animate")} ${d("dots")} ` + g("│"));
+  console.log(g("│") + `  ${cy("◆ insights")}    ${d("auto-insights")}    ${cy("◆ heatmap")} ${d("coupling")}    ${cy("◆ check")} ${d("guard")}   ` + g("│"));
+  console.log(g("│") + `  ${cy("◆ impact")}      ${d("blast")}          ${cy("◆ circular")} ${d("cycles")}    ${cy("◆ doctor")} ${d("setup")} ` + g("│"));
   console.log(g("└" + line + "┘"));
   console.log("");
   console.log(b("  Quick navigate:") + d("  (type number or command, q to quit)"));
-  console.log(`  ${g("[1]")} ${cy("architecture")}  ${d("— vision")}      ${g("[2]")} ${cy("trace")}  ${d("POST /api/users")}   ${g("[3]")} ${cy("check")}  ${d("layers")}`);
-  console.log(`  ${g("[4]")} ${cy("circular")}    ${d("— cycles")}      ${g("[5]")} ${cy("doctor")} ${d("— setup")}        ${g("[6]")} ${cy("help")}   ${d("— all cmds")}`);
+  console.log(`  ${g("[1]")} ${cy("architecture")} ${d("vision")}  ${g("[2]")} ${cy("trace")} ${d("flow")}  ${g("[3]")} ${cy("animate")} ${y("✨")}  ${g("[4]")} ${cy("insights")} ${y("👁️")}`);
+  console.log(`  ${g("[5]")} ${cy("check")} ${d("layers")}  ${g("[6]")} ${cy("circular")} ${d("cycles")}  ${g("[7]")} ${cy("heatmap")} ${d("map")}  ${g("[8]")} ${cy("doctor")} ${d("ok")}`);
   console.log("");
-  console.log(d("  Try: ") + cy("chameleye trace POST /api/users --format mermaid --output flow.mmd"));
+  console.log(d("  Try: ") + cy("chameleye animate POST /api/users") + d("  •  ") + cy("chameleye insights"));
   console.log(d("  Docs: https://github.com/JoyalJJoy/chameleye"));
   console.log("");
 }
@@ -156,14 +188,15 @@ async function interactiveWelcome() {
   while (true) {
     const ans = (await ask(c.cyan("› ") + "Select " + c.green("[1-6]") + c.dim(" or type command ") + c.dim("(q to quit): "))).trim().toLowerCase();
     if (!ans || ans === "q" || ans === "quit" || ans === "exit") { rl.close(); break; }
-    // number map
-    const map: Record<string, string> = { "1": "architecture", "2": "trace", "3": "check", "4": "circular", "5": "doctor", "6": "help", "7": "dependencies", "8": "impact" };
+    // number map — matches welcome [1-8]
+    const map: Record<string, string> = { "1": "architecture", "2": "trace", "3": "animate", "4": "insights", "5": "check", "6": "circular", "7": "heatmap", "8": "doctor" };
     let cmd = map[ans] ?? ans;
-    // handle trace without target -> prompt for it
-    if (cmd === "trace" || cmd === "eye") {
+    // handle trace/animate without target -> prompt for it
+    if (cmd === "trace" || cmd === "eye" || cmd === "animate") {
       const t = (await ask(c.dim("  route/function (e.g. POST /api/users): "))).trim();
-      if (t) cmd = `trace ${t}`;
-      else { console.log(c.yellow("  → try: trace POST /api/users")); continue; }
+      if (t) cmd = `${cmd} ${t}`;
+      else if (cmd === "trace" || cmd === "eye") { console.log(c.yellow("  → try: trace POST /api/users")); continue; }
+      else cmd = "animate POST /api/users";
     }
     if (cmd === "help" || cmd === "--help" || cmd === "-h") { console.log(help()); continue; }
     // re-invoke main with new args by spawning
@@ -503,7 +536,6 @@ async function main() {
     }
     return;
   } else if (cmd === "dead") {
-    // dead = FUNCTION/METHOD with 0 incoming CALL and not a route handler
     const hasIncoming = new Set(g.edges.filter(e=>e.type==="CALL").map(e=>e.to));
     const routeHandlers = new Set(g.edges.filter(e=>e.type==="CALL" && e.label==="handler").map(e=>e.to));
     const dead = g.nodes.filter(n=> (n.type==="FUNCTION"||n.type==="METHOD") && !hasIncoming.has(n.id) && !routeHandlers.has(n.id) && n.name!=="query");
@@ -514,6 +546,136 @@ async function main() {
       if (dead.length>20) out += c.dim(`  … +${dead.length-20} more\n`);
       writeOutput(out, opts);
     }
+    return;
+  } else if (cmd === "insights") {
+    // exciting auto-insights
+    const fileNodes = g.nodes.filter(n=>["FILE","CONTROLLER","SERVICE","REPOSITORY"].includes(n.type));
+    const routeNodes = g.nodes.filter(n=>n.type==="ROUTE");
+    const funcNodes = g.nodes.filter(n=>n.type==="FUNCTION"||n.type==="METHOD");
+    const dbNodes = g.nodes.filter(n=>n.type==="DATABASE");
+    // central service = most incoming dependents (prefer SERVICE/CONTROLLER/REPOSITORY)
+    const inDeg = new Map<string,number>();
+    for (const e of g.edges) inDeg.set(e.to, (inDeg.get(e.to)||0)+1);
+    const pool = g.nodes.filter(n=>["SERVICE","CONTROLLER","REPOSITORY"].includes(n.type));
+    const central = [...(pool.length? pool: g.nodes)].sort((a,b)=>(inDeg.get(b.id)||0)-(inDeg.get(a.id)||0))[0];
+    // deepest flow = longest trace from any route
+    let deepest = { len: 0, route: "" };
+    for (const r of routeNodes) {
+      const sg = subgraphFrom(g, [r.id], 20);
+      if (sg.nodes.length > deepest.len) deepest = { len: sg.nodes.length, route: r.name };
+    }
+    // orphan routes = no outgoing
+    const outDeg = new Set(g.edges.map(e=>e.from));
+    const orphans = routeNodes.filter(r=>!outDeg.has(r.id));
+    // db hotspot
+    const dbHits = dbNodes.map(db=>({ name: db.name, hits: g.edges.filter(e=>e.to===db.id).length })).sort((a,b)=>b.hits-a.hits)[0];
+    let out = c.bold(c.green("👁️  ChamelEye Insights — exciting finds\n")) + c.dim("─".repeat(50)) + "\n\n";
+    out += `  ${c.cyan("• Central service:")} ${central? c.bold(central.name) + c.dim(` (${central.file||central.type}, ${inDeg.get(central.id)||0} dependents)`) : c.dim("—")}\n`;
+    out += `  ${c.cyan("• Deepest flow:")} ${deepest.route? c.bold(deepest.route) + c.dim(` → ${deepest.len} nodes`) : c.dim("—")}\n`;
+    out += `  ${c.cyan("• Routes:")} ${c.green(String(routeNodes.length))}  ${c.cyan("Files:")} ${fileNodes.length}  ${c.cyan("Funcs:")} ${funcNodes.length}  ${c.cyan("DBs:")} ${dbNodes.map(d=>d.name).join(", ")||c.dim("none")}\n`;
+    if (dbHits) out += `  ${c.cyan("• DB hotspot:")} ${c.yellow(dbHits.name)} ${c.dim(`(${dbHits.hits} queries)` )}\n`;
+    if (orphans.length) out += `  ${c.yellow("• Orphan routes:")} ${orphans.map(o=>o.name).join(", ")}\n`;
+    else out += `  ${c.green("• Orphan routes:")} ${c.dim("none — all routes wired")}\n`;
+    // coupling
+    const coupling = g.nodes.filter(n=>n.type==="SERVICE").map(s=>{
+      const efferent = g.edges.filter(e=>e.from===s.id).length;
+      const afferent = g.edges.filter(e=>e.to===s.id).length;
+      return { name: s.name, efferent, afferent, total: efferent+afferent };
+    }).sort((a,b)=>b.total-a.total).slice(0,3);
+    if (coupling.length) {
+      out += `\n  ${c.bold("Top coupling:")}\n`;
+      for (const cp of coupling) out += `    ${cp.name}  ${c.dim(`→ ${cp.efferent} out, ${cp.afferent} in`)}\n`;
+    }
+    out += `\n${c.dim("Try: chameleye animate POST /api/users  •  chameleye heatmap  •  chameleye check")}`;
+    writeOutput(out, opts);
+    return;
+  } else if (cmd === "heatmap") {
+    const services = g.nodes.filter(n=>n.type==="SERVICE"||n.type==="CONTROLLER"||n.type==="REPOSITORY");
+    if (services.length===0) { writeOutput(c.yellow("No services/controllers found for heatmap"), opts); return; }
+    let out = c.bold(c.green(" coupling heatmap ")) + c.dim("(afferent ←  efferent →)\n") + c.dim("─".repeat(50)) + "\n";
+    const max = Math.max(1, ...services.map(s=> g.edges.filter(e=>e.from===s.id).length + g.edges.filter(e=>e.to===s.id).length));
+    for (const s of services.slice(0,12)) {
+      const eff = g.edges.filter(e=>e.from===s.id).length;
+      const aff = g.edges.filter(e=>e.to===s.id).length;
+      const total = eff+aff;
+      const barLen = Math.round((total/max)*18);
+      const bar = c.green("█".repeat(barLen)) + c.dim("░".repeat(18-barLen));
+      const name = s.name.padEnd(18).slice(0,18);
+      out += `  ${name} ${bar}  ${c.dim(`${aff}← ${eff}→`)}\n`;
+    }
+    if (format==="json") {
+      const data = services.map(s=>({ name: s.name, file: s.file, afferent: g.edges.filter(e=>e.to===s.id).length, efferent: g.edges.filter(e=>e.from===s.id).length }));
+      writeOutput(JSON.stringify(data, null, 2), opts);
+    } else writeOutput(out, opts);
+    return;
+  } else if (cmd === "animate") {
+    const target = posClean.join(" ").trim() || "POST /api/users";
+    let startIds: string[] = [];
+    if (/^(GET|POST|PUT|DELETE|PATCH)\s+\//i.test(target)) {
+      const norm = target.toUpperCase().replace(/\s+/g, " ").trim();
+      startIds = g.nodes.filter(n=>n.type==="ROUTE" && n.name.toUpperCase()===norm).map(n=>n.id);
+      if (startIds.length===0) {
+        const p = norm.split(/\s+/).slice(1).join(" ");
+        startIds = g.nodes.filter(n=>n.type==="ROUTE" && n.name.includes(p)).map(n=>n.id);
+      }
+      if (startIds.length===0) startIds = g.nodes.filter(n=>n.type==="ROUTE").slice(0,1).map(n=>n.id);
+    } else {
+      startIds = g.nodes.filter(n=>n.name.toLowerCase().includes(target.toLowerCase())).slice(0,1).map(n=>n.id);
+      if (startIds.length===0) startIds = g.nodes.filter(n=>n.type==="ROUTE").slice(0,1).map(n=>n.id);
+    }
+    if (startIds.length===0) { console.log(c.yellow(`No route for animate "${target}"`)); return; }
+    const sg = subgraphFrom(g, startIds, depth);
+    const order = sg.nodes.map(n=>n.id);
+    const speed = parseInt(opts.speed ?? "160",10);
+    if (format==="json" || format==="mermaid") { // no animate for json
+      writeOutput(format==="json"? renderJson(sg): renderMermaid(sg), opts);
+      return;
+    }
+    // if not TTY or --no-animate, just show trace
+    if (!process.stdout.isTTY || opts["no-animate"]) {
+      writeOutput(renderTerminal(sg, { title: `Animate ${target} (static)` }), opts);
+      return;
+    }
+    // animate with dots ● moving
+    let idx = 0;
+    const dot = c.green("●"), dimDot = c.dim("●");
+    const animate = () => {
+      // clear screen
+      process.stdout.write("\x1b[2J\x1b[H");
+      const title = c.bold(c.green(`✨ ChamelEye animate — ${target}`)) + c.dim(`  ${idx+1}/${order.length}  (Ctrl+C to stop)`) + "\n" + c.dim("─".repeat(50)) + "\n";
+      let out = title + "\n";
+      for (let i=0;i<order.length;i++) {
+        const id = order[i];
+        const n = sg.nodes.find(x=>x.id===id)!;
+        const isActive = i===idx;
+        const isPast = i<idx;
+        const icon = isActive ? dot : isPast ? c.green("◆") : dimDot;
+        const name = isActive ? c.bold(c.green(n.name)) : isPast ? c.green(n.name) : c.dim(n.name);
+        const file = n.file ? c.dim(` (${n.file}${n.line? `:${n.line}`:""})`) : "";
+        out += `  ${icon} ${name}${file}\n`;
+        if (i < order.length-1) {
+          const isEdgeActive = i===idx-1 || i===idx;
+          out += `  ${isEdgeActive ? c.green("│") : c.dim("│")}\n`;
+          out += `  ${isEdgeActive ? c.green("▼") : c.dim("▼")}\n`;
+        }
+      }
+      out += `\n${c.dim("─".repeat(50))}\n`;
+      out += c.dim(`Nodes: ${sg.nodes.length}  Edges: ${sg.edges.length}  Speed: ${speed}ms`);
+      process.stdout.write(out);
+    };
+    // handle Ctrl+C
+    const onSig = () => { process.stdout.write("\n" + c.dim("— stopped —\n")); process.exit(0); };
+    process.on("SIGINT", onSig);
+    animate();
+    const iv = setInterval(() => {
+      idx = (idx+1) % order.length;
+      animate();
+      if (idx===0) { // one loop then pause
+        // could loop forever but stop after 3 loops to not hang CI
+      }
+    }, speed);
+    // auto-stop after 12 seconds (exciting but not infinite)
+    setTimeout(() => { clearInterval(iv); process.stdout.write("\n" + c.green("✓ flow complete — ") + c.dim("rerun: chameleye animate " + target + "\n")); process.exit(0); }, Math.min(12000, order.length*speed*2+1000));
     return;
   } else {
     const sug = didYouMean(cmd, ALL_CMDS);
