@@ -346,7 +346,7 @@ function help(cmd?: string) {
     `  • chameleye trace POST /api/orders --format json`,
     `  • chameleye check --strict`,
     ``,
-    `${u("Docs: https://github.com/JoyalJJoy/chameleye  •  ")}`,
+    `${u("Docs: https://github.com/JoyalJJoy/chameleye")}`,
   ].join("\n");
 }
 
@@ -580,7 +580,7 @@ async function main() {
     console.log(`  Routes: ${hasRoutes? c.green(String(hasRoutes)) : c.yellow("0 — no Express/Next routes detected")}`);
     console.log(`  DB infra: ${hasDb? c.green("found") : c.dim("none")}`);
     console.log(`  Config: ${fs.existsSync(path.join(cwd,"chameleye.config.ts"))||fs.existsSync(path.join(cwd,"flowmap.config.ts"))? c.green("present"):c.dim("none (zero-config ok)")}`);
-    console.log(`  TS: ${c.green("ok")}  : ${fs.existsSync(path.join(cwd,".opencode/opencode.json"))? c.green("active"):c.dim("—")}`);
+    console.log(`  TS: ${c.green("ok")}`);
     if (g0.nodes.length===0) console.log(c.yellow("\n⚠ No nodes — check include globs / run from project root"));
     const healthy = hasRoutes && g0.nodes.length > 5;
     react(healthy ? "success" : "warn", healthy ? "System healthy — ready to trace" : "System idle — no routes detected", healthy ? "Next: chameleye trace POST /api/users" : "Try: chameleye architecture --verbose", opts);
