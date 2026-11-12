@@ -116,4 +116,3 @@ MIT. Local-first, no telemetry by default. Contributions welcome.
 > Never hide uncertainty. A chameleon eye doesn't pretend — it shows what it sees, marks what it infers, admits what it can't.
 
 ---
-
